@@ -5,8 +5,12 @@
 #include <unistd.h>
 #include <sys/stat.h>
 #include <string.h>
+// #include <time.h>
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wsizeof-pointer-memaccess"
+
+// clock_t start, end;
+// double cpu_time_used;
 
 void reverse_string(char *c, int n)
 {
@@ -28,13 +32,13 @@ void print_progress(long long int total_char, long long int cur_char, char *p)
     sprintf(p, "\r%.2Lf%%", progress);
     fflush(stdout);
     write(1, p, sizeof p);
-    // printf("%.2Lf%%\n", progress);
     return;
 }
 
 int main(int argc, char *argv[])
 {
-    int fd, fd2, sz = 1024 * 1024; // 1mb chunks
+    // start = clock();
+    int fd, fd2, sz = 1024 * 128; // 128kb chunks
     const char *f1 = argv[1];
     char *c = (char *)calloc(sz, sizeof(char)), *p = (char *)calloc(100, sizeof(char));
     char output_file[500] = "1_", dir_path[500] = "Assignment/";
@@ -134,5 +138,8 @@ int main(int argc, char *argv[])
         exit(1);
     }
 
+    // end = clock();
+    // cpu_time_used = ((double)(end - start)) / CLOCKS_PER_SEC;
+    // printf("\n%f\n", cpu_time_used);
     return 0;
 }
