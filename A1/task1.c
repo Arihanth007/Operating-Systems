@@ -40,7 +40,8 @@ int main(int argc, char *argv[])
     // start = clock();
     int fd, fd2, sz = 1024 * 128; // 128kb chunks
     const char *f1 = argv[1];
-    char *c = (char *)calloc(sz, sizeof(char)), *p = (char *)calloc(100, sizeof(char));
+    // char *c = (char *)calloc(sz, sizeof(char)), *p = (char *)calloc(100, sizeof(char));
+    char c[sz * sizeof(char)], p[100];
     char output_file[500] = "1_", dir_path[500] = "Assignment/";
     strcat(output_file, f1);
     strcat(dir_path, output_file);
@@ -69,8 +70,9 @@ int main(int argc, char *argv[])
     }
     // printf("\nSize of file = %lld\n", st.st_size);
 
-    memset(c, 0, sizeof(c));
-    // const int chunk = 1;
+    // memset(c, 0, sizeof(c));
+    fflush(stdin);
+    // const int chunk = 128;
     const int chunk = sz;
     off_t tmp = lseek(fd, -chunk, SEEK_END), lst;
     // printf("Location from the end is %lld\n", tmp);
@@ -96,7 +98,8 @@ int main(int argc, char *argv[])
         reverse_string(c, readnow);
         // printf("%s", c);
         write(fd2, c, readnow);
-        memset(c, 0, sizeof(c));
+        // memset(c, 0, sizeof(c));
+        fflush(stdin);
         print_progress(st.st_size, tmp, p);
         tmp = lseek(fd, -2 * readnow, SEEK_CUR);
         // printf("Location from the end is %lld\n", tmp);
@@ -114,7 +117,8 @@ int main(int argc, char *argv[])
             lst = chunk;
         print_progress(st.st_size, lst, p);
         lseek(fd, 0, SEEK_SET);
-        memset(c, 0, sz * sizeof(char));
+        // memset(c, 0, sz * sizeof(char));
+        fflush(stdin);
         readnow = read(fd, c, lst);
         reverse_string(c, readnow);
         // printf("%s", c);
@@ -125,7 +129,7 @@ int main(int argc, char *argv[])
 
     // printf("\n\nNumber of chunks read = %d\n", cnt - 1);
     print_progress(st.st_size, 0, p);
-    free(c);
+    // free(c);
 
     if (close(fd) < 0)
     {
