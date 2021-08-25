@@ -28,7 +28,8 @@ void print_progress(long long int total_char, long long int cur_char, char *p)
     if (cur_char > total_char)
         cur_char = 0;
     long double progress = 100.0 * (total_char - cur_char) / total_char;
-    memset(p, 0, sizeof(p));
+    // memset(p, 0, sizeof(p));
+    fflush(stdin);
     sprintf(p, "\r%.2Lf%%", progress);
     fflush(stdout);
     write(1, p, sizeof p);
