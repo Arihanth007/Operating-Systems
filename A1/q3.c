@@ -48,9 +48,16 @@ void print_permissions(char *file_name, char *p)
 
 int main(int argc, char *argv[])
 {
+    char p[500], dir_path1[100] = "Assignment/1_", dir_path2[100] = "Assignment/2_";
+    if (argc < 2)
+    {
+        sprintf(p, "Error: Some arguments are missing.\n");
+        write(1, p, strlen(p));
+        exit(1);
+    }
+
     int fd;
     const char *f1 = argv[1];
-    char p[500], dir_path1[100] = "Assignment/1_", dir_path2[100] = "Assignment/2_";
     char directory[50] = "Assignment", output[2][5] = {"No", "Yes"};
     strcat(dir_path1, f1);
     strcat(dir_path2, f1);
