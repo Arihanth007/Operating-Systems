@@ -7,7 +7,7 @@ void echo(char *token)
     while (1)
     {
         print(token);
-        token = strtok(NULL, "\n");
+        token = strtok(NULL, " ");
         if (token == NULL)
         {
             print("\n");
