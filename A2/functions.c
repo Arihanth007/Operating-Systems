@@ -9,6 +9,7 @@ char *get_input()
     size_t characters = getline(string_pointer, &size, stdin);
 
     char *output = malloc(characters + 5), *temp = malloc(characters + 5);
+    strtok(string, "\n");
     temp = clear_tabs(string, temp);
     output = clear_spaces(temp, output);
 
@@ -23,11 +24,13 @@ char *clear_spaces(char *string, char *output)
     token = strtok(string, s);
 
     /* walk through other tokens */
-    while (token != NULL)
+    while (1)
     {
         strcat(output, token);
-        strcat(output, s);
         token = strtok(NULL, s);
+        if (token == NULL)
+            break;
+        strcat(output, s);
     }
 
     return output;
@@ -39,11 +42,13 @@ char *clear_tabs(char *string, char *output)
     token = strtok(string, s);
 
     /* walk through other tokens */
-    while (token != NULL)
+    while (1)
     {
         strcat(output, token);
-        strcat(output, " ");
         token = strtok(NULL, s);
+        if (token == NULL)
+            break;
+        strcat(output, " ");
     }
 
     return output;

@@ -1,7 +1,7 @@
 #include "headers.h"
 #include "functions.h"
 #include "echo.h"
-#define sz 100
+#define sz 1024
 
 char hostname[sz],
     username[sz], home[sz], prevdir[sz], currentdir[sz], dirprint[sz];
@@ -26,8 +26,9 @@ void print_prompt()
     printf("<%s@%s:%s> ", username, hostname, dirprint);
 }
 
-void call_fn(char *cmd)
+void call_fn(char *str)
 {
+    char *cmd = strtok(str, " ");
     if (strcmp(cmd, "echo") == 0)
     {
         echo(cmd);
@@ -44,8 +45,18 @@ int main(int argc, char **argv)
         print_prompt();
 
         char *string = get_input();
-        char *token = strtok(string, " ");
-        call_fn(token);
+        char *cmd = strtok(string, ";"), cmd_arr[100][sz];
+        int cnt = 0;
+        while (cmd != NULL)
+        {
+            strcpy(cmd_arr[cnt++], cmd);
+            cmd = strtok(NULL, ";");
+        }
+
+        for (int i = 0; i < cnt; i++)
+        {
+            call_fn(cmd_arr[i]);
+        }
 
         free(string);
     }

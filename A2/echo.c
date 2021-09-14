@@ -7,9 +7,12 @@ void echo(char *token)
     while (1)
     {
         print(token);
-        token = strtok(NULL, " ");
+        token = strtok(NULL, "\n");
         if (token == NULL)
+        {
+            print("\n");
             break;
+        }
         print(" ");
     }
 }
