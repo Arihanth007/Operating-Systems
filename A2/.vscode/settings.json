@@ -1,6 +1,7 @@
 {
     "files.associations": {
         "functions.h": "c",
-        "headers.h": "c"
+        "headers.h": "c",
+        "echo.h": "c"
     }
 }

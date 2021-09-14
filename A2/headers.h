@@ -4,7 +4,9 @@
 #include <string.h>
 #include <unistd.h>
 #include <limits.h>
+#include <dirent.h>
 
+#define sz 1024
 #define intro "\n\
 ███████╗██╗      █████╗ ███████╗██╗  ██╗    \n\
 ██╔════╝██║     ██╔══██╗██╔════╝██║  ██║    \n\

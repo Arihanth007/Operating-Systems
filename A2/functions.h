@@ -1,9 +1,8 @@
 #ifndef FUNCTIONS
 #define FUNCTIONS
 
-char *get_input();
-char *clear_spaces(char *string, char *output);
-char *clear_tabs(char *string, char *output);
+void get_input(char *string);
+void my_tokenizer(char *string, char *output);
 void print(char *str);
 
 #endif
