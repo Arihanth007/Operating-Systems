@@ -1,2 +1,2 @@
 main:
-	gcc -g main.c functions.c
+	gcc -g main.c functions.c echo.c
