@@ -1,6 +1,7 @@
 #include "headers.h"
 #include "functions.h"
 #include "echo.h"
+#include "pwd.h"
 #define sz 1024
 
 char hostname[sz],
@@ -32,6 +33,10 @@ void call_fn(char *str)
     if (strcmp(cmd, "echo") == 0)
     {
         echo(cmd);
+    }
+    else if (strcmp(cmd, "pwd") == 0)
+    {
+        pwd();
     }
 }
 
