@@ -60,6 +60,24 @@ void get_info(char *file1)
         perror("Stat");
         return;
     }
+    struct passwd *p;
+    uid_t uid = st.st_uid;
+    if ((p = getpwuid(uid)) == NULL)
+    {
+        perror("getpwuid() error");
+        return;
+    }
+    else
+    {
+        printf("getpwuid() returned the following info for uid %d:\n",
+               (int)uid);
+        printf("  pw_name  : %s\n", p->pw_name);
+        printf("  pw_uid   : %d\n", (int)p->pw_uid);
+        printf("  pw_gid   : %d\n", (int)p->pw_gid);
+        printf("  pw_dir   : %s\n", p->pw_dir);
+        printf("  pw_shell : %s\n", p->pw_shell);
+    }
+
     printf("%d\t", st.st_nlink);
     printf("%lld\t", st.st_size);
 

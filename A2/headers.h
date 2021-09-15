@@ -9,6 +9,7 @@
 #include <sys/stat.h>
 #include <stdint.h>
 #include <time.h>
+#include <pwd.h>
 
 #define sz 1024
 #define intro "\n\
