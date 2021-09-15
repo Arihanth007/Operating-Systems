@@ -3,6 +3,7 @@
 #include "echo.h"
 #include "pwd.h"
 #include "cd.h"
+#include "ls.h"
 
 char hostname[sz],
     username[sz], home[sz], prevdir[2][sz], currentdir[sz], dirprint[sz];
@@ -76,6 +77,10 @@ void call_fn(char *str)
             strcpy(prevdir[0], currentdir);
         }
         cd(cmd, home, prevdir[1]);
+    }
+    else if (strcmp(cmd, "ls") == 0)
+    {
+        ls(cmd, home, prevdir[1]);
     }
 }
 

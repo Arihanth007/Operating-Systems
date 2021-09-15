@@ -12,24 +12,36 @@ void cd(char *token, char *home, char *prev)
     if (inp[0] == '.' && inp[1] != '.')
     {
         if (chdir(inp) != 0)
+        {
             perror("Chdir error");
+            return;
+        }
     }
     else if (inp[0] == '.' && inp[1] == '.')
     {
         if (chdir(inp) != 0)
+        {
             perror("Chdir error");
+            return;
+        }
     }
     else if (inp[0] == '-')
     {
         if (chdir(prev) != 0)
+        {
             perror("Chdir error");
+            return;
+        }
     }
     else if (inp[0] == '~')
     {
         if (strlen(inp) < 2)
         {
             if (chdir(home) != 0)
+            {
                 perror("Chdir error");
+                return;
+            }
             return;
         }
         char *ptr = inp;
@@ -37,7 +49,10 @@ void cd(char *token, char *home, char *prev)
         strcat(dir, home);
         strcat(dir, ptr);
         if (chdir(dir) != 0)
+        {
             perror("Chdir error");
+            return;
+        }
     }
     else
     {
@@ -48,7 +63,10 @@ void cd(char *token, char *home, char *prev)
         {
             perror("Relative path to (our) home failed: ");
             if (chdir(inp) != 0)
+            {
                 perror("Absolute path failed too: ");
+                return;
+            }
         }
     }
 }
