@@ -60,31 +60,32 @@ void get_info(char *file1)
         perror("Stat");
         return;
     }
+
     struct passwd *p;
-    uid_t uid = st.st_uid;
+    uid_t uid = st.st_uid, gid = st.st_gid;
     if ((p = getpwuid(uid)) == NULL)
     {
         perror("getpwuid() error");
         return;
     }
-    else
+
+    struct group *g;
+    if ((g = getgrgid(gid)) == NULL)
     {
-        printf("getpwuid() returned the following info for uid %d:\n",
-               (int)uid);
-        printf("  pw_name  : %s\n", p->pw_name);
-        printf("  pw_uid   : %d\n", (int)p->pw_uid);
-        printf("  pw_gid   : %d\n", (int)p->pw_gid);
-        printf("  pw_dir   : %s\n", p->pw_dir);
-        printf("  pw_shell : %s\n", p->pw_shell);
+        perror("Group: ");
+        return;
     }
 
     printf("%d\t", st.st_nlink);
+    printf("%s\t", p->pw_name);
+    printf("%s\t", g->gr_name);
     printf("%lld\t", st.st_size);
 
     strncpy(a, ctime(&st.st_mtime), 16);
     for (int i = 4; i < 16; i++)
         printf("%c", a[i]);
     printf("\t");
+    return;
 }
 
 void get_user_info(char *file1)
@@ -103,11 +104,11 @@ void get_user_info(char *file1)
     for (int i = 4; i < 16; i++)
         printf("%c", a[i]);
     printf("\t");
+    return;
 }
 
-void print_ls(char *dir, int op_a, int op_l)
+void print_ls(char *dir, int isA, int isL)
 {
-    //Here we will list the directory
     struct dirent *d;
     DIR *dh = opendir(dir);
     if (!dh)
@@ -118,27 +119,35 @@ void print_ls(char *dir, int op_a, int op_l)
             perror("Unable to read directory");
         return;
     }
-    //While the next entry is not readable we will print directory files
+
     while ((d = readdir(dh)) != NULL)
     {
-        //If hidden files are found we continue
-        if (!op_a && d->d_name[0] == '.')
+        if (!isA && d->d_name[0] == '.')
             continue;
 
-        get_permissions(d->d_name);
-        get_info(d->d_name);
-        printf("%s\t", d->d_name);
-
-        if (op_l)
+        if (!isL)
+            printf("%s\t", d->d_name);
+        else
+        {
+            char cur_dir[sz];
+            getcwd(cur_dir, sz);
+            chdir(dir);
+            get_permissions(d->d_name);
+            get_info(d->d_name);
+            printf("%s", d->d_name);
             printf("\n");
+            chdir(cur_dir);
+        }
     }
-    if (!op_l)
+    if (!isL)
         printf("\n");
+
+    return;
 }
 
 void ls(char *token, char *home, char *prev)
 {
-    char args[100][sz], flags[5], directories[sz];
+    char args[100][sz], flags[5], directories[100][sz];
     int t = 0, f = 0, d = 0, isL = 0, isA = 0;
     token = strtok(NULL, " ");
     while (token != NULL)
@@ -155,11 +164,13 @@ void ls(char *token, char *home, char *prev)
             if (strlen(args[i]) > 2)
                 flags[f++] = args[i][2];
         }
+        else if (args[i][0] == '~')
+            strcpy(directories[d++], home);
         else
-            strcpy(&directories[d++], args[i]);
+            strcpy(directories[d++], args[i]);
     }
     if (d == 0)
-        strcpy(&directories[d++], ".");
+        strcpy(directories[d++], ".");
 
     for (int i = 0; i < f; i++)
     {
@@ -170,5 +181,11 @@ void ls(char *token, char *home, char *prev)
     }
 
     for (int i = 0; i < d; i++)
-        print_ls(&directories[i], isA, isL);
+    {
+        if (d > 1)
+            printf("%s:\n", directories[i]);
+        print_ls(directories[i], isA, isL);
+        if (i < d - 1)
+            printf("\n");
+    }
 }

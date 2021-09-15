@@ -10,6 +10,7 @@
 #include <stdint.h>
 #include <time.h>
 #include <pwd.h>
+#include <grp.h>
 
 #define sz 1024
 #define intro "\n\
