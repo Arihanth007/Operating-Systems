@@ -1,7 +1,6 @@
 #include "headers.h"
 #include "functions.h"
 #include "echo.h"
-#include "pwd.h"
 #include "cd.h"
 #include "ls.h"
 

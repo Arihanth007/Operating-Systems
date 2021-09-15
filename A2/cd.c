@@ -70,3 +70,11 @@ void cd(char *token, char *home, char *prev)
         }
     }
 }
+
+void pwd()
+{
+    char cwd[sz];
+    if (getcwd(cwd, sz) == NULL)
+        perror("Get cwd: ");
+    printf("%s\n", cwd);
+}

@@ -1,6 +1,92 @@
 #include "headers.h"
 #include "functions.h"
 
+void get_permissions(char *file1)
+{
+    char str[11], *s = str;
+    struct stat st;
+    mode_t owner, group, other;
+
+    if (stat(file1, &st) == -1)
+    {
+        perror("Stat: ");
+        return;
+    }
+
+    if (S_ISREG(st.st_mode))
+        *s++ = '-';
+    else if (S_ISDIR(st.st_mode))
+        *s++ = 'd';
+    else if (S_ISCHR(st.st_mode))
+        *s++ = 'c';
+    else if (S_ISBLK(st.st_mode))
+        *s++ = 'b';
+    else if (S_ISFIFO(st.st_mode))
+        *s++ = 'f';
+    else if (S_ISLNK(st.st_mode))
+        *s++ = 'l';
+    else
+        *s++ = 's';
+
+    owner = st.st_mode & S_IRWXU;
+    group = st.st_mode & S_IRWXG;
+    other = st.st_mode & S_IRWXO;
+
+    *s++ = owner & S_IRUSR ? 'r' : '-';
+    *s++ = owner & S_IWUSR ? 'w' : '-';
+    *s++ = owner & S_IXUSR ? 'x' : '-';
+
+    *s++ = group & S_IRGRP ? 'r' : '-';
+    *s++ = group & S_IWGRP ? 'w' : '-';
+    *s++ = group & S_IXGRP ? 'x' : '-';
+
+    *s++ = other & S_IROTH ? 'r' : '-';
+    *s++ = other & S_IWOTH ? 'w' : '-';
+    *s++ = other & S_IXOTH ? 'x' : '-';
+
+    *s = '\0';
+
+    printf("%s\t", str);
+
+    return;
+}
+
+void get_info(char *file1)
+{
+    char a[50];
+    struct stat st;
+    if (stat(file1, &st) == -1)
+    {
+        perror("Stat");
+        return;
+    }
+    printf("%d\t", st.st_nlink);
+    printf("%lld\t", st.st_size);
+
+    strncpy(a, ctime(&st.st_mtime), 16);
+    for (int i = 4; i < 16; i++)
+        printf("%c", a[i]);
+    printf("\t");
+}
+
+void get_user_info(char *file1)
+{
+    char a[50];
+    struct stat st;
+    if (stat(file1, &st) == -1)
+    {
+        perror("Stat");
+        return;
+    }
+    printf("%d\t", st.st_nlink);
+    printf("%lld\t", st.st_size);
+
+    strncpy(a, ctime(&st.st_mtime), 16);
+    for (int i = 4; i < 16; i++)
+        printf("%c", a[i]);
+    printf("\t");
+}
+
 void print_ls(char *dir, int op_a, int op_l)
 {
     //Here we will list the directory
@@ -20,7 +106,11 @@ void print_ls(char *dir, int op_a, int op_l)
         //If hidden files are found we continue
         if (!op_a && d->d_name[0] == '.')
             continue;
-        printf("%s  ", d->d_name);
+
+        get_permissions(d->d_name);
+        get_info(d->d_name);
+        printf("%s\t", d->d_name);
+
         if (op_l)
             printf("\n");
     }
