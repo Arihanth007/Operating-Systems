@@ -115,8 +115,22 @@ void print_ls(char *dir, int isA, int isL)
     {
         if (errno == ENOENT)
             perror("Directory doesn't exist");
+        else if (errno == ENOTDIR)
+        {
+            if (!isL)
+                printf("%s\n", dir);
+            else
+            {
+                get_permissions(dir);
+                get_info(dir);
+                printf("%s", dir);
+                printf("\n");
+            }
+        }
         else
+        {
             perror("Unable to read directory");
+        }
         return;
     }
 

@@ -3,6 +3,7 @@
 #include "echo.h"
 #include "cd.h"
 #include "ls.h"
+#include "processes.h"
 
 char hostname[sz],
     username[sz], home[sz], prevdir[2][sz], currentdir[sz], dirprint[sz];
@@ -52,12 +53,30 @@ void check_pwd()
 void print_prompt()
 {
     check_pwd();
-    printf("<%s@%s:%s> ", username, hostname, dirprint);
+    printf("<\033[0;31m%s\033[0;34m@%s\033[0;32m:%s\033[0m> ", username, hostname, dirprint);
+}
+
+int check_repreat(char *str)
+{
+    int repeat = 1;
+    char *cmd = strtok(str, " ");
+    if (strcmp(cmd, "repeat") == 0)
+    {
+        cmd = strtok(NULL, " ");
+        repeat = atoi(cmd);
+    }
+    while (cmd != NULL)
+        cmd = strtok(NULL, " ");
+
+    return repeat;
 }
 
 void call_fn(char *str)
 {
     char *cmd = strtok(str, " ");
+    if (cmd == NULL)
+        return;
+
     if (strcmp(cmd, "echo") == 0)
     {
         echo(cmd);
@@ -80,6 +99,10 @@ void call_fn(char *str)
     else if (strcmp(cmd, "ls") == 0)
     {
         ls(cmd, home, prevdir[1]);
+    }
+    else
+    {
+        process(cmd, home, prevdir[1]);
     }
 }
 

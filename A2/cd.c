@@ -4,6 +4,8 @@
 void cd(char *token, char *home, char *prev)
 {
     token = strtok(NULL, " ");
+    if (token == NULL)
+        return;
     char inp[sz], dir[sz], cur_dir[sz];
     getcwd(cur_dir, sz);
     strcpy(inp, token);
@@ -46,7 +48,7 @@ void cd(char *token, char *home, char *prev)
         }
         char *ptr = inp;
         ptr++;
-        strcat(dir, home);
+        strcpy(dir, home);
         strcat(dir, ptr);
         if (chdir(dir) != 0)
         {
