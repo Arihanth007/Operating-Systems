@@ -3,6 +3,7 @@
 void pwd()
 {
     char cwd[sz];
-    getcwd(cwd, sz);
+    if (getcwd(cwd, sz) == NULL)
+        perror("Get cwd: ");
     printf("%s\n", cwd);
 }

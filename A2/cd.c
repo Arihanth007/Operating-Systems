@@ -11,31 +11,44 @@ void cd(char *token, char *home, char *prev)
 
     if (inp[0] == '.' && inp[1] != '.')
     {
-        chdir(inp);
+        if (chdir(inp) != 0)
+            perror("Chdir error");
     }
     else if (inp[0] == '.' && inp[1] == '.')
     {
-        chdir(inp);
+        if (chdir(inp) != 0)
+            perror("Chdir error");
     }
     else if (inp[0] == '-')
     {
-        chdir(prev);
+        if (chdir(prev) != 0)
+            perror("Chdir error");
     }
     else if (inp[0] == '~')
     {
         if (strlen(inp) < 2)
-            chdir(home);
+        {
+            if (chdir(home) != 0)
+                perror("Chdir error");
+            return;
+        }
         char *ptr = inp;
         ptr++;
         strcat(dir, home);
         strcat(dir, ptr);
-        chdir(dir);
+        if (chdir(dir) != 0)
+            perror("Chdir error");
     }
     else
     {
         strcpy(dir, cur_dir);
         strcat(dir, "/");
         strcat(dir, inp);
-        chdir(dir);
+        if (chdir(dir) != 0)
+        {
+            perror("Relative path to (our) home failed: ");
+            if (chdir(inp) != 0)
+                perror("Absolute path failed too: ");
+        }
     }
 }

@@ -8,6 +8,8 @@ void get_input(char *ostr)
     char *string = malloc(size);
     char **string_pointer = &string; // double pointer to char array
     size_t characters = getline(string_pointer, &size, stdin);
+    if (characters == -1)
+        perror("Taking input: ");
 
     char output[sz] = "";
     my_tokenizer(string, output);

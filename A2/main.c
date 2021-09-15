@@ -5,24 +5,26 @@
 #include "cd.h"
 
 char hostname[sz],
-    username[sz], home[sz], prevdir[sz], currentdir[sz], dirprint[sz];
+    username[sz], home[sz], prevdir[2][sz], currentdir[sz], dirprint[sz];
 
-int initialise()
+void initialise()
 {
-    getlogin_r(username, sz);
-    gethostname(hostname, sz);
-    getcwd(home, sz);
-    strcpy(prevdir, home);
-    return 0;
+    if (getlogin_r(username, sz) == -1)
+        perror("Get username: ");
+    if (gethostname(hostname, sz) == -1)
+        perror("Get hostname: ");
+    if (getcwd(home, sz) == NULL)
+        perror("Get cwd: ");
+    strcpy(prevdir[0], home);
+    strcpy(prevdir[1], home);
 }
 
 void check_pwd()
 {
-    memset(prevdir, 0, sizeof(prevdir));
-    strcpy(prevdir, currentdir);
     memset(dirprint, 0, sizeof(dirprint));
     memset(currentdir, 0, sizeof(currentdir));
-    getcwd(currentdir, sz);
+    if (getcwd(currentdir, sz) == NULL)
+        perror("Get cwd: ");
     int cmp = strcmp(currentdir, home);
     if (cmp == 0)
         dirprint[0] = '~';
@@ -40,13 +42,11 @@ void check_pwd()
             for (int i = a; i < b; i++)
                 dirprint[i - a + 1] = currentdir[i];
         }
-        else
-            getcwd(dirprint, sz);
+        else if (getcwd(dirprint, sz) == NULL)
+            perror("Get cwd: ");
     }
-    else
-    {
-        getcwd(dirprint, sz);
-    }
+    else if (getcwd(dirprint, sz) == NULL)
+        perror("Get cwd: ");
 }
 
 void print_prompt()
@@ -68,7 +68,14 @@ void call_fn(char *str)
     }
     else if (strcmp(cmd, "cd") == 0)
     {
-        cd(cmd, home, prevdir);
+        if (strcmp(prevdir[0], currentdir) != 0)
+        {
+            memset(prevdir[1], 0, sizeof(prevdir[1]));
+            strcpy(prevdir[1], prevdir[0]);
+            memset(prevdir[0], 0, sizeof(prevdir[0]));
+            strcpy(prevdir[0], currentdir);
+        }
+        cd(cmd, home, prevdir[1]);
     }
 }
 
@@ -88,8 +95,6 @@ int main(int argc, char **argv)
         while (cmd != NULL)
         {
             strcpy(cmd_arr[cnt++], cmd);
-            // print(cmd);
-            // print("\n");
             cmd = strtok(NULL, ";");
         }
 
