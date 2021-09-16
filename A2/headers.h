@@ -1,3 +1,6 @@
+#ifndef HEADERS
+#define HEADERS
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <errno.h>
@@ -23,3 +26,5 @@
 ██║     ███████╗██║  ██║███████║██║  ██║    \n\
 ╚═╝     ╚══════╝╚═╝  ╚═╝╚══════╝╚═╝  ╚═╝    \n\
 Functional Limited Applicability SHell\n"
+
+#endif

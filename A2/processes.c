@@ -8,12 +8,15 @@ void exit_bg_process()
 
     if ((pid = waitpid(-1, &status, WNOHANG)) < 0)
     {
-        perror("Child process termination: ");
+        if (errno != ECHILD)
+            perror("Child process termination: ");
         return;
     }
 
-    sprintf(buf, "\nProcess with %d exited %s", pid, status ? "abnormally" : "normally");
-    write(1, buf, strlen(buf));
+    printf("\nProcess with %d exited %s", pid, status ? "abnormally" : "normally\n");
+    // sprintf(buf, "\nProcess with %d exited %s", pid, status ? "abnormally" : "normally\n");
+    // write(1, buf, strlen(buf));
+    return;
 }
 
 void process(char *token, char *home, char *prev)
@@ -61,12 +64,11 @@ void process(char *token, char *home, char *prev)
             {
                 perror("Execvp: ");
             }
-            return;
         }
         else
         {
             printf("%d\n", forkReturn);
-            // wait(NULL);
         }
     }
+    return;
 }
