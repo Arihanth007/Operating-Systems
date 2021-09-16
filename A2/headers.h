@@ -12,6 +12,7 @@
 #include <time.h>
 #include <pwd.h>
 #include <grp.h>
+#include <signal.h>
 
 #define sz 1024
 #define intro "\n\

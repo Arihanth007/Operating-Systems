@@ -1,31 +1,50 @@
 #include "headers.h"
 #include "functions.h"
 
+void exit_bg_process()
+{
+    int status, pid;
+    char buf[sz] = "";
+
+    if ((pid = waitpid(-1, &status, WNOHANG)) < 0)
+    {
+        perror("Child process termination: ");
+        return;
+    }
+
+    sprintf(buf, "\nProcess with %d exited %s", pid, status ? "abnormally" : "normally");
+    write(1, buf, strlen(buf));
+}
+
 void process(char *token, char *home, char *prev)
 {
     int forkReturn, i = 0, loopsize, isBG = 0;
-    forkReturn = fork();
     char *args[sz], vals[100][sz];
 
     while (token != NULL)
     {
+        if (strcmp(token, "&") == 0)
+        {
+            isBG = 1;
+            token = strtok(NULL, " ");
+            continue;
+        }
         strcpy(vals[i], token);
         args[i] = vals[i];
         i++;
         token = strtok(NULL, " ");
     }
-    if (strcmp(vals[i - 1], "&") == 0)
-    {
-        isBG = 1;
-        i--;
-    }
-    strcpy(vals[i++], "NULL");
+    vals[i][0] = '\0';
 
     if (!isBG)
     {
+        forkReturn = fork();
         if (forkReturn == 0)
         {
-            execvp(vals[0], args);
+            if (execvp(vals[0], args) < 0)
+            {
+                perror("Execvp: ");
+            }
         }
         else
         {
@@ -34,9 +53,15 @@ void process(char *token, char *home, char *prev)
     }
     else
     {
+        signal(SIGCHLD, exit_bg_process);
+        forkReturn = fork();
         if (forkReturn == 0)
         {
-            execvp(vals[0], args);
+            if (execvp(vals[0], args) < 0)
+            {
+                perror("Execvp: ");
+            }
+            return;
         }
         else
         {

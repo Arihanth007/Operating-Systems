@@ -25,6 +25,8 @@ void my_tokenizer(char *string, char *output)
 {
     char delim[] = "\t\n ";
     char *token = strtok(string, delim);
+    if (token == NULL)
+        return;
 
     while (1)
     {

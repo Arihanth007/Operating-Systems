@@ -119,6 +119,8 @@ int main(int argc, char **argv)
         get_input(string);
         int cnt = 0;
         char *cmd = strtok(string, ";"), cmd_arr[100][sz];
+        if (cmd == NULL)
+            continue;
         while (cmd != NULL)
         {
             strcpy(cmd_arr[cnt++], cmd);
