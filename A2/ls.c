@@ -107,6 +107,23 @@ void get_user_info(char *file1)
     return;
 }
 
+int get_blocks(char *file1)
+{
+    char a[50];
+    struct stat st;
+    if (stat(file1, &st) == -1)
+        return 0;
+    return st.st_blocks;
+}
+
+int isDirectory(const char *path)
+{
+    struct stat statbuf;
+    if (stat(path, &statbuf) != 0)
+        return 0;
+    return S_ISDIR(statbuf.st_mode);
+}
+
 void print_ls(char *dir, int isA, int isL)
 {
     struct dirent *d;
@@ -159,6 +176,40 @@ void print_ls(char *dir, int isA, int isL)
     return;
 }
 
+void total_blocks(char *dir, int isA)
+{
+    struct dirent *d;
+    DIR *dh = opendir(dir);
+    if (!dh)
+    {
+        if (errno == ENOENT)
+            perror("Directory doesn't exist");
+        else if (errno == ENOTDIR)
+        {
+        }
+        else
+        {
+            perror("Unable to read directory");
+        }
+        return;
+    }
+
+    int blocks = 0;
+    while ((d = readdir(dh)) != NULL)
+    {
+        if (!isA && d->d_name[0] == '.')
+            continue;
+        char cur_dir[sz];
+        getcwd(cur_dir, sz);
+        chdir(dir);
+        blocks += get_blocks(d->d_name);
+        chdir(cur_dir);
+    }
+    printf("total %d\n", blocks);
+
+    return;
+}
+
 void ls(char *token, char *home, char *prev)
 {
     char args[100][sz], flags[5], directories[100][sz];
@@ -196,9 +247,14 @@ void ls(char *token, char *home, char *prev)
 
     for (int i = 0; i < d; i++)
     {
-        if (d > 1)
+        if ((d > 1) & isDirectory(directories[i]))
             printf("%s:\n", directories[i]);
+
+        if (isL)
+            total_blocks(directories[i], isA);
+
         print_ls(directories[i], isA, isL);
+
         if (i < d - 1)
             printf("\n");
     }
