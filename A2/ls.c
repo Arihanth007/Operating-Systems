@@ -53,7 +53,6 @@ void get_permissions(char *file1)
 
 void get_info(char *file1)
 {
-    char a[50];
     struct stat st;
     if (stat(file1, &st) == -1)
     {
@@ -81,9 +80,24 @@ void get_info(char *file1)
     printf("%s\t", g->gr_name);
     printf("%lld\t", st.st_size);
 
-    strncpy(a, ctime(&st.st_mtime), 16);
-    for (int i = 4; i < 16; i++)
-        printf("%c", a[i]);
+    char a[50] = "";
+    strcpy(a, ctime(&st.st_mtime));
+
+    time_t cur_time, time2;
+    time(&cur_time);
+    if (difftime(mktime(localtime(&cur_time)), mktime(localtime(&(st.st_mtime)))) < 0 || difftime(mktime(localtime(&cur_time)), mktime(localtime(&(st.st_mtime)))) > 15778475)
+    {
+        for (int i = 4; i < 11; i++)
+            printf("%c", a[i]);
+        printf(" ");
+        for (int i = 20; i < 24; i++)
+            printf("%c", a[i]);
+    }
+    else
+    {
+        for (int i = 4; i < 16; i++)
+            printf("%c", a[i]);
+    }
     printf("\t");
     return;
 }
@@ -210,7 +224,7 @@ void total_blocks(char *dir, int isA)
     return;
 }
 
-void ls(char *token, char *home, char *prev)
+void ls(char *token, char *home)
 {
     char args[100][sz], flags[5], directories[100][sz];
     int t = 0, f = 0, d = 0, isL = 0, isA = 0;

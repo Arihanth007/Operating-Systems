@@ -4,6 +4,7 @@
 #include "cd.h"
 #include "ls.h"
 #include "processes.h"
+#include "pinfo.h"
 
 char hostname[sz],
     username[sz], home[sz], prevdir[2][sz], currentdir[sz], dirprint[sz];
@@ -98,7 +99,11 @@ void call_fn(char *str)
     }
     else if (strcmp(cmd, "ls") == 0)
     {
-        ls(cmd, home, prevdir[1]);
+        ls(cmd, home);
+    }
+    else if (strcmp(cmd, "pinfo") == 0)
+    {
+        pinfo(cmd);
     }
     else
     {
