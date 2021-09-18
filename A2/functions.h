@@ -6,5 +6,6 @@ void query_history(char *token);
 void my_tokenizer(char *string, char *output);
 void print(char *str);
 int min(int a, int b);
+int max(int a, int b);
 
 #endif

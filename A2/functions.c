@@ -41,8 +41,8 @@ void my_tokenizer(char *string, char *output)
 void query_history(char *token)
 {
     FILE *fp;
-    char line[sz];
-    int id = 10;
+    char line[sz], hist[100][sz];
+    int id = 10, cnt = 0;
 
     token = strtok(NULL, " ");
     if (token != NULL)
@@ -55,11 +55,14 @@ void query_history(char *token)
         return;
     }
 
-    while ((fgets(line, sz, fp) != NULL) && id--)
+    while ((fgets(line, sz, fp) != NULL))
     {
         char *token2 = strtok(line, "\n");
-        printf("%s\n", token2);
+        strcpy(hist[cnt++], line);
     }
+
+    for (int i = max(cnt - id, 0); i < cnt; i++)
+        printf("%s\n", hist[i]);
 
     fclose(fp);
 
@@ -77,4 +80,8 @@ void print(char *str)
 int min(int a, int b)
 {
     return a < b ? a : b;
+}
+int max(int a, int b)
+{
+    return a > b ? a : b;
 }
