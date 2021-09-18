@@ -38,6 +38,34 @@ void my_tokenizer(char *string, char *output)
     }
 }
 
+void query_history(char *token)
+{
+    FILE *fp;
+    char line[sz];
+    int id = 10;
+
+    token = strtok(NULL, " ");
+    if (token != NULL)
+        id = atoi(token);
+
+    fp = fopen(".history", "r");
+    if (fp == NULL)
+    {
+        perror("Opening file");
+        return;
+    }
+
+    while ((fgets(line, sz, fp) != NULL) && id--)
+    {
+        char *token2 = strtok(line, "\n");
+        printf("%s\n", token2);
+    }
+
+    fclose(fp);
+
+    return;
+}
+
 void print(char *str)
 {
     char p[1024];

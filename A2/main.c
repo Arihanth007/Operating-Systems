@@ -5,10 +5,71 @@
 #include "ls.h"
 #include "processes.h"
 #include "pinfo.h"
-#include "history.h"
 
 char hostname[sz],
-    username[sz], home[sz], prevdir[2][sz], currentdir[sz], dirprint[sz];
+    username[sz], home[sz], prevdir[2][sz], currentdir[sz], dirprint[sz], hist[25][sz];
+int hist_sz = 0;
+
+void load_history()
+{
+    FILE *fp;
+    char line[sz];
+
+    fp = fopen(".history", "r");
+    if (fp == NULL)
+    {
+        perror("Opening file");
+        return;
+    }
+
+    while (fgets(line, sz, fp) != NULL)
+    {
+        char *token = strtok(line, "\n");
+        if (token == NULL)
+            continue;
+        // printf("%s\n", token);
+        strcpy(hist[hist_sz++], token);
+    }
+
+    fclose(fp);
+
+    return;
+}
+
+void add_history(char *command)
+{
+    if (strcmp(command, "") == 0)
+        return;
+
+    FILE *fp;
+
+    fp = fopen(".history", "w+");
+    if (fp == NULL)
+    {
+        perror("Opening file");
+        return;
+    }
+
+    if (hist_sz < 20)
+    {
+        strcpy(hist[hist_sz++], command);
+        for (int i = 0; i < hist_sz; i++)
+            fprintf(fp, "%s\n", hist[i]);
+    }
+    else
+    {
+        for (int i = 0; i < 20; i++)
+        {
+            memset(hist[i], 0, sz);
+            strcpy(hist[i], hist[i + 1]);
+        }
+        strcpy(hist[19], command);
+        for (int i = 0; i < 20; i++)
+            fprintf(fp, "%s\n", hist[i]);
+    }
+
+    fclose(fp);
+}
 
 void initialise()
 {
@@ -20,6 +81,7 @@ void initialise()
         perror("Get cwd: ");
     strcpy(prevdir[0], home);
     strcpy(prevdir[1], home);
+    load_history();
 }
 
 void check_pwd()
@@ -106,6 +168,10 @@ void call_fn(char *str)
     {
         pinfo(cmd);
     }
+    else if (strcmp(cmd, "history") == 0)
+    {
+        query_history(cmd);
+    }
     else
     {
         process(cmd, home, prevdir[1]);
@@ -124,7 +190,7 @@ int main(int argc, char **argv)
         char *string = malloc(sz), copy2[sz] = "";
         get_input(string);
         strcpy(copy2, string);
-        history(string);
+        add_history(string);
 
         int cnt = 0;
         char *cmd = strtok(string, ";"), cmd_arr[100][sz];
