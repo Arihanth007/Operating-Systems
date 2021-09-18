@@ -1,0 +1,20 @@
+history
+history 15
+pinfo
+repeat 2 gedit &
+echo hello
+vim &
+cd ~
+cd -
+cd ..
+cd ..
+cd -
+cd -
+cd -
+cd -
+cd ~
+repeat 2 sleep 5
+repeat 2 gedit
+cd ..
+cd .
+cd ..
