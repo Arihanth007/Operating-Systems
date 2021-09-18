@@ -2,6 +2,7 @@
     "files.associations": {
         "functions.h": "c",
         "headers.h": "c",
-        "echo.h": "c"
+        "echo.h": "c",
+        "sstream": "c"
     }
 }

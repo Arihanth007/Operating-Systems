@@ -19,7 +19,7 @@ void exit_bg_process()
 
 void process(char *token, char *home, char *prev)
 {
-    int forkReturn, i = 0, loopsize, isBG = 0;
+    int forkReturn, i = 0, isBG = 0;
     char *args[sz], vals[100][sz];
 
     while (token != NULL)

@@ -5,6 +5,7 @@
 #include "ls.h"
 #include "processes.h"
 #include "pinfo.h"
+#include "history.h"
 
 char hostname[sz],
     username[sz], home[sz], prevdir[2][sz], currentdir[sz], dirprint[sz];
@@ -120,8 +121,11 @@ int main(int argc, char **argv)
     {
         print_prompt();
 
-        char *string = malloc(sz);
+        char *string = malloc(sz), copy2[sz] = "";
         get_input(string);
+        strcpy(copy2, string);
+        history(string);
+
         int cnt = 0;
         char *cmd = strtok(string, ";"), cmd_arr[100][sz];
         if (cmd == NULL)
@@ -134,7 +138,28 @@ int main(int argc, char **argv)
 
         for (int i = 0; i < cnt; i++)
         {
-            call_fn(cmd_arr[i]);
+            char simply_temp[sz] = "";
+            strcpy(simply_temp, cmd_arr[i]);
+            char *token = strtok(simply_temp, " ");
+            if (strcmp(token, "repeat") == 0)
+            {
+                token = strtok(NULL, " ");
+                int repeat_num = atoi(token);
+                char repeat_cmd[sz] = "";
+                while ((token = strtok(NULL, " ")) != NULL)
+                {
+                    strcat(repeat_cmd, token);
+                    strcat(repeat_cmd, " ");
+                }
+                while (repeat_num--)
+                {
+                    char tmp[sz] = "";
+                    strcpy(tmp, repeat_cmd);
+                    call_fn(tmp);
+                }
+            }
+            else
+                call_fn(cmd_arr[i]);
         }
 
         free(string);
