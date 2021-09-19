@@ -1,6 +1,8 @@
 #include "headers.h"
 #include "functions.h"
 
+extern char *process_name[1000000];
+
 void exit_bg_process()
 {
     int status, pid;
@@ -13,14 +15,18 @@ void exit_bg_process()
         return;
     }
 
-    fprintf(stderr, "\nProcess with %d exited %s", pid, status ? "abnormally" : "normally\n");
+    if (pid < pid_sz)
+        fprintf(stderr, "\n%s with %d exited %s", process_name[pid], pid, status ? "abnormally" : "normally\n");
+    else
+        fprintf(stderr, "\nProcess with %d exited %s", pid, status ? "abnormally" : "normally\n");
+    free(process_name[pid]);
     return;
 }
 
 void process(char *token, char *home, char *prev)
 {
     int forkReturn, i = 0, isBG = 0;
-    char *args[sz], vals[100][sz];
+    char *args[sz], vals[100][sz], *pname = malloc(sz);
 
     while (token != NULL)
     {
@@ -54,6 +60,7 @@ void process(char *token, char *home, char *prev)
     }
     else
     {
+        strcpy(pname, vals[0]);
         signal(SIGCHLD, exit_bg_process);
         forkReturn = fork();
         if (forkReturn == 0)
@@ -66,6 +73,8 @@ void process(char *token, char *home, char *prev)
         else
         {
             printf("%d\n", forkReturn);
+            if (forkReturn < pid_sz)
+                process_name[forkReturn] = pname;
         }
     }
     return;

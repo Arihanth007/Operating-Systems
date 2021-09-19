@@ -7,7 +7,7 @@
 #include "pinfo.h"
 
 char hostname[sz],
-    username[sz], home[sz], prevdir[2][sz], currentdir[sz], dirprint[sz], hist[25][sz];
+    username[sz], home[sz], prevdir[2][sz], currentdir[sz], dirprint[sz], hist[25][sz], *process_name[pid_sz];
 int hist_sz = 0;
 
 void load_history()
@@ -18,7 +18,7 @@ void load_history()
     fp = fopen(".history", "r");
     if (fp == NULL)
     {
-        perror("Opening file");
+        // perror("Opening file");
         return;
     }
 
