@@ -1,8 +1,3 @@
-sleep 2 &
-gedit &
-repeat 2 sleep 2 &
-repeat 2 sleep 2 &
-gedit &
 gedit &
 gedit &
 sleep &
@@ -18,3 +13,8 @@ gedit &
 sleep &
 sleep 2 &
 gedit &
+repeat 2 sleep 2 &
+pinfo
+pinfo 17088
+pinfo 17087
+pinfo
