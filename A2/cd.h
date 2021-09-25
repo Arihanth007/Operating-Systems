@@ -1,7 +1,7 @@
 #ifndef CD
 #define CD
 
-void cd(char *token, char *home, char *prev);
+void cd(char a[][sz], int t, char *home, char *prev);
 void pwd();
 
 #endif

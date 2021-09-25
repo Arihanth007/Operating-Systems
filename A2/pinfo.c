@@ -21,17 +21,11 @@ int readfile(char *filename, char *content)
     return cnt;
 }
 
-void pinfo(char *token)
+void pinfo(char a[][sz], int t)
 {
     int pid = getpid();
-
-    while (1)
-    {
-        token = strtok(NULL, " ");
-        if (token == NULL)
-            break;
-        pid = atoi(token);
-    }
+    if (t > 1)
+        pid = atoi(a[1]);
 
     FILE *fptr;
     char f1[20], c1[sz] = "", f2[20], c2[sz] = "";

@@ -6,6 +6,7 @@ void get_input(char *ostr)
     size_t size = 1024; // initial size of char array
     fflush(stdin);
     char *string = malloc(size);
+    memset(string, 0, size);
     char **string_pointer = &string; // double pointer to char array
     size_t characters = getline(string_pointer, &size, stdin);
     if (characters == -1)
@@ -38,15 +39,14 @@ void my_tokenizer(char *string, char *output)
     }
 }
 
-void query_history(char *token)
+void query_history(char a[][sz], int t)
 {
     FILE *fp;
     char line[sz], hist[100][sz];
     int id = 10, cnt = 0;
 
-    token = strtok(NULL, " ");
-    if (token != NULL)
-        id = atoi(token);
+    if (t > 1)
+        id = atoi(a[1]);
 
     fp = fopen(".history", "r");
     if (fp == NULL)

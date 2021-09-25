@@ -3,7 +3,7 @@
 
 extern char *process_name[1000000];
 
-void exit_bg_process()
+void exit_bg_process(int num)
 {
     int status, pid;
     char buf[sz] = "";
@@ -16,66 +16,77 @@ void exit_bg_process()
     }
 
     if (pid < pid_sz)
-        fprintf(stderr, "\n%s with %d exited %s", process_name[pid], pid, status ? "abnormally" : "normally\n");
+    {
+        if (process_name[pid] != NULL)
+            fprintf(stderr, "\n%s with %d exited %s", process_name[pid], pid, status ? "abnormally" : "normally\n");
+    }
     else
         fprintf(stderr, "\nProcess with %d exited %s", pid, status ? "abnormally" : "normally\n");
     free(process_name[pid]);
     return;
 }
 
-void process(char *token, char *home, char *prev)
+void execute_bg(char *args[])
 {
-    int forkReturn, i = 0, isBG = 0;
-    char *args[sz], vals[100][sz], *pname = malloc(sz);
-
-    while (token != NULL)
+    char *pname = malloc(sz);
+    strcpy(pname, args[0]);
+    signal(SIGCHLD, exit_bg_process);
+    int forkReturn = fork();
+    if (forkReturn == 0)
     {
-        if (strcmp(token, "&") == 0)
+        if (execvp(args[0], args) < 0)
         {
-            isBG = 1;
-            token = strtok(NULL, " ");
-            continue;
-        }
-        strcpy(vals[i], token);
-        args[i] = vals[i];
-        i++;
-        token = strtok(NULL, " ");
-    }
-    vals[i][0] = '\0';
-
-    if (!isBG)
-    {
-        forkReturn = fork();
-        if (forkReturn == 0)
-        {
-            if (execvp(vals[0], args) < 0)
-            {
-                perror("Execvp");
-            }
-        }
-        else
-        {
-            wait(NULL);
+            perror("Execvp");
+            exit(EXIT_FAILURE);
         }
     }
     else
     {
-        strcpy(pname, vals[0]);
-        signal(SIGCHLD, exit_bg_process);
-        forkReturn = fork();
-        if (forkReturn == 0)
+        if (setpgid(forkReturn, 0) != 0)
+            perror("setpgid() error");
+        printf("%d\n", forkReturn);
+        if (forkReturn < pid_sz)
+            process_name[forkReturn] = pname;
+    }
+}
+
+void execute_fg(char *args[])
+{
+    int forkReturn = fork();
+    if (forkReturn == 0)
+    {
+        if (execvp(args[0], args) < 0)
         {
-            if (execvp(vals[0], args) < 0)
-            {
-                perror("Execvp");
-            }
-        }
-        else
-        {
-            printf("%d\n", forkReturn);
-            if (forkReturn < pid_sz)
-                process_name[forkReturn] = pname;
+            perror("Execvp");
+            exit(EXIT_FAILURE);
         }
     }
+    else
+    {
+        if (setpgid(forkReturn, 0) != 0)
+            perror("setpgid() error");
+        wait(NULL);
+    }
+}
+
+void process(char a[][sz], int t, char *home, char *prev)
+{
+    int forkReturn, isBG = 0;
+    char *args[sz], *pname = malloc(sz);
+
+    if (strcmp(a[t - 1], "&") == 0)
+    {
+        isBG = 1;
+        t--;
+    }
+
+    for (int i = 0; i < t; i++)
+        args[i] = a[i];
+
+    if (isBG)
+        execute_bg(args);
+    else
+        execute_fg(args);
+
     return;
 }

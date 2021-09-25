@@ -1,14 +1,11 @@
 #include "headers.h"
 #include "functions.h"
 
-void cd(char *token, char *home, char *prev)
+void cd(char a[][sz], int t, char *home, char *prev)
 {
-    token = strtok(NULL, " ");
-    if (token == NULL)
-        return;
-    char inp[sz], dir[sz], cur_dir[sz];
+    char inp[sz] = "", dir[sz], cur_dir[sz];
+    strcpy(inp, a[1]);
     getcwd(cur_dir, sz);
-    strcpy(inp, token);
     int end, l = strlen(cur_dir);
 
     if (inp[0] == '.' && inp[1] != '.')

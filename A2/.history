@@ -1,20 +1,20 @@
+history 20
+exit
+cat cd.h
+vim &
 gedit &
-gedit &
-sleep &
-sleep 2 &
-gedit &
-sleep 2 &
-gedit &
-history
-gedit &
-sleep 2 &
-gedit &
-gedit &
-sleep &
-sleep 2 &
-gedit &
-repeat 2 sleep 2 &
 pinfo
-pinfo 17088
-pinfo 17087
-pinfo
+pinfo 91987
+pinfo 91938
+man
+man exit
+vim
+vi
+vim &
+man exit &
+pinfo 92470
+q
+exit
+repeat 2 sleep 1
+repeat 5 echo hello; repeat 4 sleep 2 &
+exit

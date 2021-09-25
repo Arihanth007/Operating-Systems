@@ -1,6 +1,6 @@
 #ifndef ECHO
 #define ECHO
 
-void echo(char *token);
+void echo(char a[][sz], int t);
 
 #endif

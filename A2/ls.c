@@ -224,18 +224,12 @@ void total_blocks(char *dir, int isA)
     return;
 }
 
-void ls(char *token, char *home)
+void ls(char args[][sz], int t, char *home)
 {
-    char args[100][sz], flags[5], directories[100][sz];
-    int t = 0, f = 0, d = 0, isL = 0, isA = 0;
-    token = strtok(NULL, " ");
-    while (token != NULL)
-    {
-        strcpy(args[t++], token);
-        token = strtok(NULL, " ");
-    }
+    char flags[5], directories[100][sz];
+    int f = 0, d = 0, isL = 0, isA = 0;
 
-    for (int i = 0; i < t; i++)
+    for (int i = 1; i < t; i++)
     {
         if (args[i][0] == '-')
         {

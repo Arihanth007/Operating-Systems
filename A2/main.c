@@ -10,6 +10,12 @@ char hostname[sz],
     username[sz], home[sz], prevdir[2][sz], currentdir[sz], dirprint[sz], hist[25][sz], *process_name[pid_sz];
 int hist_sz = 0;
 
+void handler(int num)
+{
+    // write(STDOUT_FILENO, "Encountered CTRL+C\n", 20);
+    return;
+}
+
 void load_history()
 {
     FILE *fp;
@@ -120,36 +126,13 @@ void print_prompt()
     printf("<\033[0;31m%s\033[0;34m@%s\033[0;32m:%s\033[0m> ", username, hostname, dirprint);
 }
 
-int check_repreat(char *str)
+void call_fn(char a[][sz], int t)
 {
-    int repeat = 1;
-    char *cmd = strtok(str, " ");
-    if (strcmp(cmd, "repeat") == 0)
-    {
-        cmd = strtok(NULL, " ");
-        repeat = atoi(cmd);
-    }
-    while (cmd != NULL)
-        cmd = strtok(NULL, " ");
-
-    return repeat;
-}
-
-void call_fn(char *str)
-{
-    char *cmd = strtok(str, " ");
-    if (cmd == NULL)
-        return;
-
-    if (strcmp(cmd, "echo") == 0)
-    {
-        echo(cmd);
-    }
-    else if (strcmp(cmd, "pwd") == 0)
-    {
+    if (strcmp(a[0], "echo") == 0)
+        echo(a, t);
+    else if (strcmp(a[0], "pwd") == 0)
         pwd();
-    }
-    else if (strcmp(cmd, "cd") == 0)
+    else if (strcmp(a[0], "cd") == 0)
     {
         if (strcmp(prevdir[0], currentdir) != 0)
         {
@@ -158,23 +141,19 @@ void call_fn(char *str)
             memset(prevdir[0], 0, sizeof(prevdir[0]));
             strcpy(prevdir[0], currentdir);
         }
-        cd(cmd, home, prevdir[1]);
+        cd(a, t, home, prevdir[1]);
     }
-    else if (strcmp(cmd, "ls") == 0)
-    {
-        ls(cmd, home);
-    }
-    else if (strcmp(cmd, "pinfo") == 0)
-    {
-        pinfo(cmd);
-    }
-    else if (strcmp(cmd, "history") == 0)
-    {
-        query_history(cmd);
-    }
+    else if (strcmp(a[0], "ls") == 0)
+        ls(a, t, home);
+    else if (strcmp(a[0], "pinfo") == 0)
+        pinfo(a, t);
+    else if (strcmp(a[0], "history") == 0)
+        query_history(a, t);
+    else if (strcmp(a[0], "exit") == 0)
+        exit(0);
     else
     {
-        process(cmd, home, prevdir[1]);
+        process(a, t, home, prevdir[1]);
     }
 }
 
@@ -182,6 +161,7 @@ int main(int argc, char **argv)
 {
     printf("%s\n\n", intro);
     initialise();
+    // signal(SIGINT, handler);
 
     while (1)
     {
@@ -204,28 +184,25 @@ int main(int argc, char **argv)
 
         for (int i = 0; i < cnt; i++)
         {
-            char simply_temp[sz] = "";
-            strcpy(simply_temp, cmd_arr[i]);
-            char *token = strtok(simply_temp, " ");
-            if (strcmp(token, "repeat") == 0)
+            int t = 0;
+            char *token = strtok(cmd_arr[i], " "), indv_cmd[100][sz];
+            while (token != NULL)
             {
+                strcpy(indv_cmd[t++], token);
                 token = strtok(NULL, " ");
-                int repeat_num = atoi(token);
-                char repeat_cmd[sz] = "";
-                while ((token = strtok(NULL, " ")) != NULL)
-                {
-                    strcat(repeat_cmd, token);
-                    strcat(repeat_cmd, " ");
-                }
-                while (repeat_num--)
-                {
-                    char tmp[sz] = "";
-                    strcpy(tmp, repeat_cmd);
-                    call_fn(tmp);
-                }
+            }
+
+            if (strcmp(indv_cmd[0], "repeat") == 0)
+            {
+                int repeat = atoi(indv_cmd[1]);
+                char repeating_arr[100][sz];
+                for (int i = 2; i < t; i++)
+                    strcpy(repeating_arr[i - 2], indv_cmd[i]);
+                for (int i = 0; i < repeat; i++)
+                    call_fn(repeating_arr, t - 2);
             }
             else
-                call_fn(cmd_arr[i]);
+                call_fn(indv_cmd, t);
         }
 
         free(string);
