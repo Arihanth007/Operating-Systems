@@ -39,6 +39,7 @@ void execute_bg(char *args[])
             perror("Execvp");
             exit(EXIT_FAILURE);
         }
+        exit(0);
     }
     else
     {
@@ -47,6 +48,7 @@ void execute_bg(char *args[])
         printf("%d\n", forkReturn);
         if (forkReturn < pid_sz)
             process_name[forkReturn] = pname;
+        return;
     }
 }
 
@@ -60,12 +62,14 @@ void execute_fg(char *args[])
             perror("Execvp");
             exit(EXIT_FAILURE);
         }
+        exit(0);
     }
     else
     {
         if (setpgid(forkReturn, 0) != 0)
             perror("setpgid() error");
         wait(NULL);
+        return;
     }
 }
 

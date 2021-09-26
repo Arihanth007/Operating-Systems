@@ -185,24 +185,102 @@ int main(int argc, char **argv)
         for (int i = 0; i < cnt; i++)
         {
             int t = 0;
-            char *token = strtok(cmd_arr[i], " "), indv_cmd[100][sz];
+            char *token = strtok(cmd_arr[i], " "), a[100][sz];
             while (token != NULL)
             {
-                strcpy(indv_cmd[t++], token);
+                strcpy(a[t++], token);
                 token = strtok(NULL, " ");
             }
 
-            if (strcmp(indv_cmd[0], "repeat") == 0)
+            if (strcmp(a[0], "repeat") == 0)
             {
-                int repeat = atoi(indv_cmd[1]);
+                int repeat = atoi(a[1]);
                 char repeating_arr[100][sz];
                 for (int i = 2; i < t; i++)
-                    strcpy(repeating_arr[i - 2], indv_cmd[i]);
+                    strcpy(repeating_arr[i - 2], a[i]);
                 for (int i = 0; i < repeat; i++)
                     call_fn(repeating_arr, t - 2);
             }
             else
-                call_fn(indv_cmd, t);
+            {
+                int isAppend = 0, isWrite = 0, isRead = 0, k = 0;
+                char write_file[sz] = "", read_file[sz] = "", b[100][sz];
+                for (int i = 0; i < t; i++)
+                {
+                    if (strcmp(a[i], ">") == 0)
+                    {
+                        isWrite = 1;
+                        strcpy(write_file, a[i + 1]);
+                        i++;
+                    }
+                    else if (strcmp(a[i], ">>") == 0)
+                    {
+                        isAppend = 1;
+                        strcpy(write_file, a[i + 1]);
+                        i++;
+                    }
+                    else if (strcmp(a[i], "<") == 0)
+                    {
+                        isRead = 1;
+                        strcpy(read_file, a[i + 1]);
+                        i++;
+                    }
+                    else
+                        strcpy(b[k++], a[i]);
+                }
+
+                if (isAppend || isWrite || isRead)
+                {
+                    int fdw, fdr, copy_stdout, copy_stdin;
+                    if (isWrite)
+                        fdw = open(write_file, O_WRONLY | O_CREAT, 0644);
+                    else if (isAppend)
+                        fdw = open(write_file, O_APPEND | O_WRONLY | O_CREAT, 0644);
+                    if (isAppend || isWrite)
+                    {
+                        if (fdw < 0)
+                        {
+                            perror("Opening file");
+                            continue;
+                        }
+                        copy_stdout = dup(STDOUT_FILENO);
+                        dup2(fdw, STDOUT_FILENO);
+                    }
+                    if (isRead)
+                    {
+                        if ((fdr = open(read_file, O_RDONLY)) < 0)
+                        {
+                            perror("Open");
+                            continue;
+                        }
+                        copy_stdin = dup(STDIN_FILENO);
+                        dup2(fdr, STDIN_FILENO);
+                    }
+
+                    call_fn(b, k);
+
+                    if (isAppend || isWrite)
+                    {
+                        dup2(copy_stdout, STDOUT_FILENO);
+                        if (close(fdw) < 0)
+                        {
+                            perror("Close");
+                            continue;
+                        }
+                    }
+                    if (isRead)
+                    {
+                        dup2(copy_stdin, STDIN_FILENO);
+                        if (close(fdr) < 0)
+                        {
+                            perror("Close");
+                            continue;
+                        }
+                    }
+                }
+                else
+                    call_fn(a, t);
+            }
         }
 
         free(string);
