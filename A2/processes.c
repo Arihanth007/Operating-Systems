@@ -34,21 +34,19 @@ void execute_bg(char *args[])
     int forkReturn = fork();
     if (forkReturn == 0)
     {
-        if (execvp(args[0], args) < 0)
+        setpgid(0, 0);
+        char *command = args[0];
+        if (execvp(command, args) < 0)
         {
             perror("Execvp");
             exit(EXIT_FAILURE);
         }
-        exit(0);
     }
     else
     {
-        if (setpgid(forkReturn, 0) != 0)
-            perror("setpgid() error");
         printf("%d\n", forkReturn);
         if (forkReturn < pid_sz)
             process_name[forkReturn] = pname;
-        return;
     }
 }
 
@@ -57,32 +55,34 @@ void execute_fg(char *args[])
     int forkReturn = fork();
     if (forkReturn == 0)
     {
-        if (execvp(args[0], args) < 0)
+        setpgid(0, 0);
+        char *command = args[0];
+        if (execvp(command, args) < 0)
         {
             perror("Execvp");
             exit(EXIT_FAILURE);
         }
-        exit(0);
     }
     else
     {
-        if (setpgid(forkReturn, 0) != 0)
-            perror("setpgid() error");
-        wait(NULL);
-        return;
+        int status;
+        if (waitpid(forkReturn, &status, WUNTRACED) > 0 && WIFSTOPPED(status) != 0)
+        {
+        }
     }
 }
 
 void process(char a[][sz], int t, char *home, char *prev)
 {
     int forkReturn, isBG = 0;
-    char *args[sz], *pname = malloc(sz);
+    char *args[t];
 
     if (strcmp(a[t - 1], "&") == 0)
     {
         isBG = 1;
         t--;
     }
+    args[t] = NULL;
 
     for (int i = 0; i < t; i++)
         args[i] = a[i];

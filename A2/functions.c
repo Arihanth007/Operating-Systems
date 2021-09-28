@@ -5,9 +5,10 @@ void get_input(char *ostr)
 {
     size_t size = 1024; // initial size of char array
     fflush(stdin);
-    char *string = malloc(size);
+    fflush(stdout);
+    char string[sz];
     memset(string, 0, size);
-    char **string_pointer = &string; // double pointer to char array
+    char *tmp = &string[0], **string_pointer = &tmp; // double pointer to char array
     size_t characters = getline(string_pointer, &size, stdin);
     if (characters == -1)
     {
@@ -17,7 +18,6 @@ void get_input(char *ostr)
 
     char output[sz] = "";
     my_tokenizer(string, output);
-    free(string);
 
     strcpy(ostr, output);
 }

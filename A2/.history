@@ -1,20 +1,20 @@
-cat cd.h > zzz.txt
-cat cd.h > zzz.txt
-cat cd.h > zzz.txt
-cat cd.h > zzz.txt
-cat cd.h
-cat cd.h > zzz.txt
-cat cd.c > zzz.txt
-sort < cd.h
-sort < cd.h
-sort < cd.h > zzz.txt
-sort < cd.h >> zzz.txt
-sort < cd.h > zzz.txt
-sort < cd.h > z.txt
-sort < cd.h >> zzz.txt
+cat cd.c | grep a
+clear
+ls |
 exit
-sort < cd.h >> zzz.txt
-sort < cd.h >> zzz.txt
-sort < cd.h >> zzz.txt
-sort < cd.h > zzz.txt
+ls |
+exit
+ls | grep *.c
+ls | grep c
+clear
+ls -l | grep *.c
+ls -l | grep c
+ls -l | grep total
+ls -la
+ls -la | head
+ls -la | tail
+vim &
+pinfo
+pinfo 9812
+ps
 exit

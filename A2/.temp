@@ -1,0 +1,9 @@
+
+
+#define CD
+#endif
+#ifndef CD
+void cd(char a[][sz], int t, char *home, char *prev);
+void pwd();
+d();
+YAY2

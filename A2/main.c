@@ -10,6 +10,25 @@ char hostname[sz],
     username[sz], home[sz], prevdir[2][sz], currentdir[sz], dirprint[sz], hist[25][sz], *process_name[pid_sz];
 int hist_sz = 0;
 
+void scam()
+{
+    int forkReturn = fork();
+    if (forkReturn == 0)
+    {
+        char command[] = "cp", *args[] = {"cp", ".pipe_write", ".pipe_read", NULL};
+        if (execvp(command, args) < 0)
+        {
+            perror("Execvp");
+            exit(EXIT_FAILURE);
+        }
+    }
+    else
+    {
+        wait(NULL);
+        return;
+    }
+}
+
 void handler(int num)
 {
     // write(STDOUT_FILENO, "Encountered CTRL+C\n", 20);
@@ -126,6 +145,17 @@ void print_prompt()
     printf("<\033[0;31m%s\033[0;34m@%s\033[0;32m:%s\033[0m> ", username, hostname, dirprint);
 }
 
+int check_pipes(char a[][sz], int t)
+{
+    int pipes = 0;
+    for (int i = 0; i < t; i++)
+    {
+        if (strcmp(a[i], "|") == 0)
+            pipes++;
+    }
+    return pipes;
+}
+
 void call_fn(char a[][sz], int t)
 {
     if (strcmp(a[0], "echo") == 0)
@@ -157,6 +187,71 @@ void call_fn(char a[][sz], int t)
     }
 }
 
+void print_redirects()
+{
+    int fdw, fdr;
+    char pipe_write[] = ".pipe_write", pipe_read[] = ".pipe_read";
+    if ((fdw = open(pipe_write, O_RDONLY | O_CREAT, 0644)) < 0)
+    {
+        perror("Opening file");
+        return;
+    }
+
+    char buff[sz];
+    while (read(fdw, buff, sz) > 0)
+        printf("%s", buff);
+
+    if (close(fdw) < 0)
+    {
+        perror("Close");
+        return;
+    }
+}
+
+void perform_redirect(char b[][sz], int l, int cur_pipe, int pipe_arr[2])
+{
+    int fdw, fdr, copy_stdout, copy_stdin;
+    char pipe_write[] = ".pipe_write", pipe_read[] = ".pipe_read";
+    FILE *f = fopen(pipe_write, "w+");
+    fclose(f);
+    if ((fdw = open(pipe_write, O_WRONLY | O_CREAT, 0644)) < 0)
+    {
+        perror("Opening file");
+        return;
+    }
+    if ((fdr = open(pipe_read, O_RDONLY | O_CREAT, 0644)) < 0)
+    {
+        perror("Open");
+        return;
+    }
+
+    if (cur_pipe != 0)
+    {
+        copy_stdin = dup(STDIN_FILENO);
+        dup2(fdr, STDIN_FILENO);
+    }
+    copy_stdout = dup(STDOUT_FILENO);
+    dup2(fdw, STDOUT_FILENO);
+
+    call_fn(b, l);
+
+    dup2(copy_stdout, STDOUT_FILENO);
+    if (cur_pipe != 0)
+    {
+        dup2(copy_stdin, STDIN_FILENO);
+    }
+    if (close(fdw) < 0)
+    {
+        perror("Close");
+        return;
+    }
+    if (close(fdr) < 0)
+    {
+        perror("Close");
+        return;
+    }
+}
+
 int main(int argc, char **argv)
 {
     printf("%s\n\n", intro);
@@ -165,15 +260,17 @@ int main(int argc, char **argv)
 
     while (1)
     {
+        fseek(stdin, 0, SEEK_END);
+        fseek(stdout, 0, SEEK_END);
         print_prompt();
 
-        char *string = malloc(sz), copy2[sz] = "";
+        char string[sz], copy2[sz] = "";
         get_input(string);
         strcpy(copy2, string);
         add_history(string);
 
         int cnt = 0;
-        char *cmd = strtok(string, ";"), cmd_arr[100][sz];
+        char *cmd = strtok(string, ";"), cmd_arr[ARR_LEN][sz];
         if (cmd == NULL)
             continue;
         while (cmd != NULL)
@@ -185,7 +282,7 @@ int main(int argc, char **argv)
         for (int i = 0; i < cnt; i++)
         {
             int t = 0;
-            char *token = strtok(cmd_arr[i], " "), a[100][sz];
+            char *token = strtok(cmd_arr[i], " "), a[ARR_LEN][sz];
             while (token != NULL)
             {
                 strcpy(a[t++], token);
@@ -195,7 +292,7 @@ int main(int argc, char **argv)
             if (strcmp(a[0], "repeat") == 0)
             {
                 int repeat = atoi(a[1]);
-                char repeating_arr[100][sz];
+                char repeating_arr[ARR_LEN][sz];
                 for (int i = 2; i < t; i++)
                     strcpy(repeating_arr[i - 2], a[i]);
                 for (int i = 0; i < repeat; i++)
@@ -203,8 +300,8 @@ int main(int argc, char **argv)
             }
             else
             {
-                int isAppend = 0, isWrite = 0, isRead = 0, k = 0;
-                char write_file[sz] = "", read_file[sz] = "", b[100][sz];
+                int isAppend = 0, isWrite = 0, isRead = 0, k = 0, pipes = check_pipes(a, t);
+                char write_file[sz] = "", read_file[sz] = "", b[ARR_LEN][sz];
                 for (int i = 0; i < t; i++)
                 {
                     if (strcmp(a[i], ">") == 0)
@@ -278,12 +375,38 @@ int main(int argc, char **argv)
                         }
                     }
                 }
+                else if (pipes != 0)
+                {
+                    char b[ARR_LEN][sz], l = 0;
+                    int pipe_arr[2], cur_pipe = 0;
+                    for (int i = 0; i < t; i++)
+                    {
+                        if (strcmp(a[i], "|") == 0)
+                        {
+                            perform_redirect(b, l, cur_pipe, pipe_arr);
+
+                            for (int j = 0; j < l; j++)
+                                memset(b[j], 0, sz);
+                            l = 0;
+                            cur_pipe++;
+                            scam();
+                        }
+                        else if (i == t - 1)
+                        {
+                            strcpy(b[l++], a[i]);
+                            perform_redirect(b, l, cur_pipe, pipe_arr);
+                        }
+                        else
+                        {
+                            strcpy(b[l++], a[i]);
+                        }
+                    }
+                    print_redirects();
+                }
                 else
                     call_fn(a, t);
             }
         }
-
-        free(string);
     }
 
     return 0;

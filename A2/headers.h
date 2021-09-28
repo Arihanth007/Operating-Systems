@@ -19,6 +19,7 @@
 #include <signal.h>
 
 #define sz 1024
+#define ARR_LEN 100
 #define pid_sz 1000000
 // #define intro "\n\
 // ███████╗██╗      █████╗ ███████╗██╗  ██╗    \n\

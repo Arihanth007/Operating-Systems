@@ -1,0 +1,27 @@
+total 304
+drwxr-xr-x	1	parallels	parallels	832	Sep 27 23:37	.
+drwxr-xr-x	1	parallels	parallels	352	Sep 25 16:23	..
+-rw-r--r--	1	parallels	parallels	1202	Sep 26 04:20	pinfo.c
+-rw-r--r--	1	parallels	parallels	96	Sep 26 04:03	cd.h
+-rw-r--r--	1	parallels	parallels	6148	Sep 27 00:00	.DS_Store
+-rw-r--r--	1	parallels	parallels	1601	Sep 27 18:43	functions.c
+-rw-r--r--	1	parallels	parallels	5649	Sep 26 04:14	ls.c
+-rw-r--r--	1	parallels	parallels	285	Sep 27 21:49	pipe.c
+-rw-r--r--	1	parallels	parallels	1949	Sep 27 23:09	processes.c
+-rw-r--r--	1	parallels	parallels	246	Sep 18 19:39	makefile
+-rw-r--r--	1	parallels	parallels	66	Sep 26 04:23	echo.h
+-rw-r--r--	1	parallels	parallels	1662	Sep 26 22:31	headers.h
+-rw-r--r--	1	parallels	parallels	107	Sep 27 21:38	.temp
+-rw-r--r--	1	parallels	parallels	224	Sep 27 23:39	.history
+-rw-r--r--	1	parallels	parallels	1484	Sep 19 23:13	README.md
+-rwxrwxr-x	1	parallels	parallels	37112	Sep 27 23:37	a.out
+-rw-r--r--	1	parallels	parallels	10639	Sep 27 22:27	main.c
+-rw-r--r--	1	parallels	parallels	1529	Sep 27 23:39	.pipe_read
+-rw-r--r--	1	parallels	parallels	284	Sep 26 04:12	ls.h
+-rw-r--r--	1	parallels	parallels	1114	Sep 27 23:39	.pipe_write
+-rw-r--r--	1	parallels	parallels	189	Sep 27 22:42	processes.h
+-rw-r--r--	1	parallels	parallels	114	Sep 26 04:16	pinfo.h
+-rw-r--r--	1	parallels	parallels	247	Sep 26 04:26	functions.h
+-rw-r--r--	1	parallels	parallels	1594	Sep 26 04:08	cd.c
+drwxr-xr-x	1	parallels	parallels	96	Sep 14 23:04	.vscode
+-rw-r--r--	1	parallels	parallels	528	Sep 26 03:54	echo.c
