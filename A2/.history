@@ -1,20 +1,20 @@
-cat cd.c | grep a
+ls -la | grep c
+cat < cd.h | grep h
+cat < cd.h | grep *
+cat < ls.c | grep () > zzz.txt; cat zzz.txt
+cat < ls.c | grep () > zzz.txt;
+cat < ls.c | grep (;
 clear
-ls |
+cat < ls.c | grep ( | wc
+cat < ls.c | grep ( | wc -l
 exit
-ls |
-exit
-ls | grep *.c
-ls | grep c
-clear
-ls -l | grep *.c
-ls -l | grep c
-ls -l | grep total
-ls -la
-ls -la | head
-ls -la | tail
-vim &
-pinfo
-pinfo 9812
-ps
-exit
+sort < ls.c | grep a | wc
+sort < ls.c | grep a | wc > zzz.txt
+cat zzz.txt
+cat < .history
+ls -la > zzz.txt
+ls > zzz.txt
+cat zzz.txt
+ls -la > zzz.txt
+cat zzz.txt | grep '\.c$'
+cat zzz.txt | grep .c

@@ -7,8 +7,9 @@
 #include "pinfo.h"
 
 char hostname[sz],
-    username[sz], home[sz], prevdir[2][sz], currentdir[sz], dirprint[sz], hist[25][sz], *process_name[pid_sz];
-int hist_sz = 0;
+    username[sz], home[sz], prevdir[2][sz], currentdir[sz], dirprint[sz], hist[25][sz];
+char *process_name[pid_sz], *process_status[pid_sz], *process_sortedID[pid_sz];
+int hist_sz = 0, process_num_added = 0;
 
 void scam()
 {
@@ -187,7 +188,7 @@ void call_fn(char a[][sz], int t)
     }
 }
 
-void print_redirects()
+void print_piping()
 {
     int fdw, fdr;
     char pipe_write[] = ".pipe_write", pipe_read[] = ".pipe_read";
@@ -197,7 +198,7 @@ void print_redirects()
         return;
     }
 
-    char buff[sz];
+    char buff[sz] = "";
     while (read(fdw, buff, sz) > 0)
         printf("%s", buff);
 
@@ -208,7 +209,7 @@ void print_redirects()
     }
 }
 
-void perform_redirect(char b[][sz], int l, int cur_pipe, int pipe_arr[2])
+void perform_piping(char b[][sz], int l, int cur_pipe, int pipe_arr[2])
 {
     int fdw, fdr, copy_stdout, copy_stdin;
     char pipe_write[] = ".pipe_write", pipe_read[] = ".pipe_read";
@@ -225,7 +226,7 @@ void perform_redirect(char b[][sz], int l, int cur_pipe, int pipe_arr[2])
         return;
     }
 
-    if (cur_pipe != 0)
+    if (cur_pipe != 1)
     {
         copy_stdin = dup(STDIN_FILENO);
         dup2(fdr, STDIN_FILENO);
@@ -236,7 +237,7 @@ void perform_redirect(char b[][sz], int l, int cur_pipe, int pipe_arr[2])
     call_fn(b, l);
 
     dup2(copy_stdout, STDOUT_FILENO);
-    if (cur_pipe != 0)
+    if (cur_pipe != 1)
     {
         dup2(copy_stdin, STDIN_FILENO);
     }
@@ -249,6 +250,60 @@ void perform_redirect(char b[][sz], int l, int cur_pipe, int pipe_arr[2])
     {
         perror("Close");
         return;
+    }
+}
+
+void perform_redirection(char b[][sz], int k, int isWrite, int isAppend, int isRead, char *write_file, char *read_file)
+{
+    int fdw, fdr, copy_stdout, copy_stdin;
+    if (isWrite)
+    {
+        FILE *f = fopen(write_file, "w+");
+        fclose(f);
+        fdw = open(write_file, O_WRONLY | O_CREAT, 0644);
+    }
+    else if (isAppend)
+        fdw = open(write_file, O_APPEND | O_WRONLY | O_CREAT, 0644);
+    if (isAppend || isWrite)
+    {
+        if (fdw < 0)
+        {
+            perror("Opening file");
+            return;
+        }
+        copy_stdout = dup(STDOUT_FILENO);
+        dup2(fdw, STDOUT_FILENO);
+    }
+    if (isRead)
+    {
+        if ((fdr = open(read_file, O_RDONLY)) < 0)
+        {
+            perror("Open");
+            return;
+        }
+        copy_stdin = dup(STDIN_FILENO);
+        dup2(fdr, STDIN_FILENO);
+    }
+
+    call_fn(b, k);
+
+    if (isAppend || isWrite)
+    {
+        dup2(copy_stdout, STDOUT_FILENO);
+        if (close(fdw) < 0)
+        {
+            perror("Close");
+            return;
+        }
+    }
+    if (isRead)
+    {
+        dup2(copy_stdin, STDIN_FILENO);
+        if (close(fdr) < 0)
+        {
+            perror("Close");
+            return;
+        }
     }
 }
 
@@ -325,57 +380,94 @@ int main(int argc, char **argv)
                     else
                         strcpy(b[k++], a[i]);
                 }
+                if (pipes != 0)
+                    strcpy(a[t++], "|");
 
-                if (isAppend || isWrite || isRead)
+                if ((isAppend || isWrite || isRead) && pipes == 0) // Redirection without piping
                 {
-                    int fdw, fdr, copy_stdout, copy_stdin;
-                    if (isWrite)
-                        fdw = open(write_file, O_WRONLY | O_CREAT, 0644);
-                    else if (isAppend)
-                        fdw = open(write_file, O_APPEND | O_WRONLY | O_CREAT, 0644);
-                    if (isAppend || isWrite)
-                    {
-                        if (fdw < 0)
-                        {
-                            perror("Opening file");
-                            continue;
-                        }
-                        copy_stdout = dup(STDOUT_FILENO);
-                        dup2(fdw, STDOUT_FILENO);
-                    }
-                    if (isRead)
-                    {
-                        if ((fdr = open(read_file, O_RDONLY)) < 0)
-                        {
-                            perror("Open");
-                            continue;
-                        }
-                        copy_stdin = dup(STDIN_FILENO);
-                        dup2(fdr, STDIN_FILENO);
-                    }
-
-                    call_fn(b, k);
-
-                    if (isAppend || isWrite)
-                    {
-                        dup2(copy_stdout, STDOUT_FILENO);
-                        if (close(fdw) < 0)
-                        {
-                            perror("Close");
-                            continue;
-                        }
-                    }
-                    if (isRead)
-                    {
-                        dup2(copy_stdin, STDIN_FILENO);
-                        if (close(fdr) < 0)
-                        {
-                            perror("Close");
-                            continue;
-                        }
-                    }
+                    perform_redirection(b, k, isWrite, isAppend, isRead, write_file, read_file);
                 }
-                else if (pipes != 0)
+                else if ((isAppend || isWrite || isRead) && pipes != 0) // Redirection with piping
+                {
+                    char b[ARR_LEN][sz], l = 0;
+                    int pipe_arr[2], cur_pipe = 0, last_pipe = 0, isPrint = 1;
+                    for (int i = 0; i < t; i++)
+                    {
+                        if (strcmp(a[i], ">") == 0 || strcmp(a[i], ">>") == 0 || strcmp(a[i], "<") == 0)
+                        {
+                            i++;
+                            continue;
+                        }
+                        else if (strcmp(a[i], "|") == 0)
+                        {
+                            cur_pipe++;
+                            isWrite = 0;
+                            isAppend = 0;
+                            isRead = 0;
+                            int temp_pipe_cnt = 0, x = 0;
+                            char c[ARR_LEN][sz];
+                            for (int j = last_pipe; j < i; j++)
+                            {
+                                if (strcmp(a[j], ">") == 0)
+                                {
+                                    isWrite = 1;
+                                    strcpy(write_file, a[j + 1]);
+                                    j++;
+                                }
+                                else if (strcmp(a[j], ">>") == 0)
+                                {
+                                    isAppend = 1;
+                                    strcpy(write_file, a[j + 1]);
+                                    j++;
+                                }
+                                else if (strcmp(a[j], "<") == 0)
+                                {
+                                    isRead = 1;
+                                    strcpy(read_file, a[j + 1]);
+                                    j++;
+                                }
+                                else
+                                    strcpy(c[x++], a[j]);
+                            }
+
+                            // debug
+                            int isDebug = 0;
+                            if (isDebug)
+                            {
+                                printf("\nCommand at pipe(%d/%d):", cur_pipe, pipes);
+                                for (int z = 0; z < x; z++)
+                                    printf(" %s", c[z]);
+                                if (isWrite)
+                                    printf("\nWriting to: %s", write_file);
+                                if (isAppend)
+                                    printf("\nAppending to: %s", write_file);
+                                if (isRead)
+                                    printf("\nReading from: %s", read_file);
+                                printf("\n");
+                            }
+
+                            if (isWrite || isAppend)
+                            {
+                                if (isRead)
+                                    perform_redirection(c, x, isWrite, isAppend, isRead, write_file, read_file);
+                                else
+                                    perform_redirection(c, x, isWrite, isAppend, 1, write_file, ".pipe_read");
+                            }
+                            if (cur_pipe == 1)
+                                perform_redirection(c, x, 1, 0, isRead, ".pipe_write", read_file);
+                            else
+                                perform_redirection(c, x, 1, 0, 1, ".pipe_write", ".pipe_read");
+
+                            last_pipe = i + 1;
+                            if (cur_pipe - 1 == pipes && (isWrite || isAppend))
+                                isPrint = 0;
+                            scam();
+                        }
+                    }
+                    if (isPrint)
+                        print_piping();
+                }
+                else if (pipes != 0) // Piping without redirection
                 {
                     char b[ARR_LEN][sz], l = 0;
                     int pipe_arr[2], cur_pipe = 0;
@@ -383,27 +475,20 @@ int main(int argc, char **argv)
                     {
                         if (strcmp(a[i], "|") == 0)
                         {
-                            perform_redirect(b, l, cur_pipe, pipe_arr);
+                            cur_pipe++;
+                            perform_piping(b, l, cur_pipe, pipe_arr);
 
                             for (int j = 0; j < l; j++)
                                 memset(b[j], 0, sz);
                             l = 0;
-                            cur_pipe++;
                             scam();
                         }
-                        else if (i == t - 1)
-                        {
-                            strcpy(b[l++], a[i]);
-                            perform_redirect(b, l, cur_pipe, pipe_arr);
-                        }
                         else
-                        {
                             strcpy(b[l++], a[i]);
-                        }
                     }
-                    print_redirects();
+                    print_piping();
                 }
-                else
+                else // No piping or redirection
                     call_fn(a, t);
             }
         }

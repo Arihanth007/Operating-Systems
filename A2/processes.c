@@ -46,7 +46,9 @@ void execute_bg(char *args[])
     {
         printf("%d\n", forkReturn);
         if (forkReturn < pid_sz)
+        {
             process_name[forkReturn] = pname;
+        }
     }
 }
 
