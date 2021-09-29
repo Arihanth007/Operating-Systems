@@ -8,8 +8,8 @@
 
 char hostname[sz],
     username[sz], home[sz], prevdir[2][sz], currentdir[sz], dirprint[sz], hist[25][sz];
-char *process_name[pid_sz], *process_status[pid_sz], *process_sortedID[pid_sz];
 int hist_sz = 0, process_num_added = 0;
+struct Process *BG_Process[MAX_BG_PCS];
 
 void scam()
 {
@@ -28,6 +28,25 @@ void scam()
         wait(NULL);
         return;
     }
+}
+
+void refresh()
+{
+    for (int i = 0; i < MAX_BG_PCS; i++)
+    {
+        if (BG_Process[i]->pid != 0)
+        {
+            char to_pinfo[sz];
+            sprintf(to_pinfo, "%d", BG_Process[i]->pid);
+            prcs_stat(to_pinfo, BG_Process[i]->process_status);
+        }
+    }
+}
+
+void free_allocated_mem()
+{
+    for (int i = 0; i < MAX_BG_PCS; i++)
+        free(BG_Process[i]);
 }
 
 void handler(int num)
@@ -108,6 +127,11 @@ void initialise()
     strcpy(prevdir[0], home);
     strcpy(prevdir[1], home);
     load_history();
+    for (int i = 0; i < MAX_BG_PCS; i++)
+    {
+        BG_Process[i] = (struct Process *)malloc(sizeof(struct Process));
+        BG_Process[i]->pid = 0;
+    }
 }
 
 void check_pwd()
@@ -159,6 +183,9 @@ int check_pipes(char a[][sz], int t)
 
 void call_fn(char a[][sz], int t)
 {
+    refresh(); // Refresh process status
+
+    // Check for which command
     if (strcmp(a[0], "echo") == 0)
         echo(a, t);
     else if (strcmp(a[0], "pwd") == 0)
@@ -178,11 +205,16 @@ void call_fn(char a[][sz], int t)
         ls(a, t, home);
     else if (strcmp(a[0], "pinfo") == 0)
         pinfo(a, t);
+    else if (strcmp(a[0], "jobs") == 0)
+        jobs(a, t);
     else if (strcmp(a[0], "history") == 0)
         query_history(a, t);
     else if (strcmp(a[0], "exit") == 0)
+    {
+        free_allocated_mem();
         exit(0);
-    else
+    }
+    else //system commands
     {
         process(a, t, home, prevdir[1]);
     }
@@ -315,6 +347,7 @@ int main(int argc, char **argv)
 
     while (1)
     {
+        // Additional flush conditions
         fseek(stdin, 0, SEEK_END);
         fseek(stdout, 0, SEEK_END);
         print_prompt();
@@ -328,7 +361,7 @@ int main(int argc, char **argv)
         char *cmd = strtok(string, ";"), cmd_arr[ARR_LEN][sz];
         if (cmd == NULL)
             continue;
-        while (cmd != NULL)
+        while (cmd != NULL) //separates by ;
         {
             strcpy(cmd_arr[cnt++], cmd);
             cmd = strtok(NULL, ";");
@@ -344,7 +377,7 @@ int main(int argc, char **argv)
                 token = strtok(NULL, " ");
             }
 
-            if (strcmp(a[0], "repeat") == 0)
+            if (strcmp(a[0], "repeat") == 0) // checks repeats
             {
                 int repeat = atoi(a[1]);
                 char repeating_arr[ARR_LEN][sz];
@@ -359,7 +392,7 @@ int main(int argc, char **argv)
                 char write_file[sz] = "", read_file[sz] = "", b[ARR_LEN][sz];
                 for (int i = 0; i < t; i++)
                 {
-                    if (strcmp(a[i], ">") == 0)
+                    if (strcmp(a[i], ">") == 0) // handles redirection files and flags
                     {
                         isWrite = 1;
                         strcpy(write_file, a[i + 1]);

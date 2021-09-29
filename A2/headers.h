@@ -21,6 +21,7 @@
 #define sz 1024
 #define ARR_LEN 100
 #define pid_sz 1000000
+#define MAX_BG_PCS 100
 // #define intro "\n\
 // ███████╗██╗      █████╗ ███████╗██╗  ██╗    \n\
 // ██╔════╝██║     ██╔══██╗██╔════╝██║  ██║    \n\
@@ -37,5 +38,11 @@
 ██║  ██║███████║██║  ██║    \n\
 ╚═╝  ╚═╝╚══════╝╚═╝  ╚═╝    \n\
 Arihanth SHell\n"
+
+struct Process
+{
+    char process_name[sz], process_status[sz];
+    int pid, processID;
+};
 
 #endif

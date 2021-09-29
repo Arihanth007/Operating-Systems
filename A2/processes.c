@@ -1,7 +1,9 @@
 #include "headers.h"
 #include "functions.h"
+#include "pinfo.h"
 
-extern char *process_name[1000000];
+extern int process_num_added;
+extern struct Process *BG_Process[MAX_BG_PCS];
 
 void exit_bg_process(int num)
 {
@@ -15,20 +17,23 @@ void exit_bg_process(int num)
         return;
     }
 
-    if (pid < pid_sz)
+    for (int i = 0; i < MAX_BG_PCS; i++)
     {
-        if (process_name[pid] != NULL)
-            fprintf(stderr, "\n%s with %d exited %s", process_name[pid], pid, status ? "abnormally" : "normally\n");
+        if (pid != 0 && BG_Process[i]->pid == pid)
+        {
+            fprintf(stderr, "\n%s with %d exited %s", BG_Process[i]->process_name, pid, status ? "abnormally" : "normally\n");
+            BG_Process[i]->pid = 0;
+            BG_Process[i]->processID = 0;
+            memset(BG_Process[i]->process_name, 0, sizeof(BG_Process[i]->process_name));
+            memset(BG_Process[i]->process_status, 0, sizeof(BG_Process[i]->process_status));
+        }
     }
-    else
-        fprintf(stderr, "\nProcess with %d exited %s", pid, status ? "abnormally" : "normally\n");
-    free(process_name[pid]);
-    return;
 }
 
 void execute_bg(char *args[])
 {
     char *pname = malloc(sz);
+    char *st_val = malloc(sz);
     strcpy(pname, args[0]);
     signal(SIGCHLD, exit_bg_process);
     int forkReturn = fork();
@@ -45,10 +50,15 @@ void execute_bg(char *args[])
     else
     {
         printf("%d\n", forkReturn);
-        if (forkReturn < pid_sz)
-        {
-            process_name[forkReturn] = pname;
-        }
+
+        char to_pinfo[sz];
+        sprintf(to_pinfo, "%d", forkReturn);
+        process_num_added++;
+        prcs_stat(to_pinfo, st_val);
+        BG_Process[process_num_added]->pid = forkReturn;
+        BG_Process[process_num_added]->processID = process_num_added;
+        strcpy(BG_Process[process_num_added]->process_name, pname);
+        strcpy(BG_Process[process_num_added]->process_status, st_val);
     }
 }
 
@@ -70,6 +80,37 @@ void execute_fg(char *args[])
         int status;
         if (waitpid(forkReturn, &status, WUNTRACED) > 0 && WIFSTOPPED(status) != 0)
         {
+        }
+    }
+}
+
+void jobs(char a[][sz], int t)
+{
+    int isRunning = 1, isStopped = 1;
+    if (t > 1)
+    {
+        for (int i = 1; i < t; i++)
+        {
+            if (strcmp(a[i], "-r") == 0)
+                isStopped = 0;
+            else if (strcmp(a[i], "-s") == 0)
+                isRunning = 0;
+        }
+    }
+    for (int i = 0; i < MAX_BG_PCS; i++)
+    {
+        if (BG_Process[i]->pid != 0)
+        {
+            if (strcmp(BG_Process[i]->process_status, "S") == 0)
+            {
+                if (isRunning)
+                    printf("[%d] %s %s [%d]\n", BG_Process[i]->processID, "Running", BG_Process[i]->process_name, BG_Process[i]->pid);
+            }
+            else if (strcmp(BG_Process[i]->process_status, "T") == 0)
+            {
+                if (isStopped)
+                    printf("[%d] %s %s [%d]\n", BG_Process[i]->processID, "Stopped", BG_Process[i]->process_name, BG_Process[i]->pid);
+            }
         }
     }
 }

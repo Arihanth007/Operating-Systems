@@ -1,20 +1,20 @@
-ls -la | grep c
-cat < cd.h | grep h
-cat < cd.h | grep *
-cat < ls.c | grep () > zzz.txt; cat zzz.txt
-cat < ls.c | grep () > zzz.txt;
-cat < ls.c | grep (;
-clear
-cat < ls.c | grep ( | wc
-cat < ls.c | grep ( | wc -l
+jobs -r
 exit
-sort < ls.c | grep a | wc
-sort < ls.c | grep a | wc > zzz.txt
-cat zzz.txt
-cat < .history
-ls -la > zzz.txt
-ls > zzz.txt
-cat zzz.txt
-ls -la > zzz.txt
-cat zzz.txt | grep '\.c$'
-cat zzz.txt | grep .c
+gedit &
+vim &
+jobs
+jobs
+jobs -s
+exit
+gedit &
+vim &
+jobs
+jobs -s
+jobs -r
+gedit &
+jobs
+vim &
+jobs
+jobs -s
+jobs -r
+exit
