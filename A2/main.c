@@ -207,6 +207,10 @@ void call_fn(char a[][sz], int t)
         pinfo(a, t);
     else if (strcmp(a[0], "jobs") == 0)
         jobs(a, t);
+    else if (strcmp(a[0], "sig") == 0)
+        sig(a, t);
+    else if (strcmp(a[0], "bg") == 0)
+        run_bg(a, t);
     else if (strcmp(a[0], "history") == 0)
         query_history(a, t);
     else if (strcmp(a[0], "exit") == 0)

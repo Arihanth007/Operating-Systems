@@ -5,6 +5,36 @@
 extern int process_num_added;
 extern struct Process *BG_Process[MAX_BG_PCS];
 
+void exit_bg_process(int num);
+void execute_bg(char *args[]);
+void execute_fg(char *args[]);
+void jobs(char a[][sz], int t);
+void sig(char a[][sz], int t);
+void run_bg(char a[][sz], int t);
+
+void process(char a[][sz], int t, char *home, char *prev)
+{
+    int forkReturn, isBG = 0;
+    char *args[t];
+
+    if (strcmp(a[t - 1], "&") == 0)
+    {
+        isBG = 1;
+        t--;
+    }
+    args[t] = NULL;
+
+    for (int i = 0; i < t; i++)
+        args[i] = a[i];
+
+    if (isBG)
+        execute_bg(args);
+    else
+        execute_fg(args);
+
+    return;
+}
+
 void exit_bg_process(int num)
 {
     int status, pid;
@@ -115,25 +145,43 @@ void jobs(char a[][sz], int t)
     }
 }
 
-void process(char a[][sz], int t, char *home, char *prev)
+void sig(char a[][sz], int t)
 {
-    int forkReturn, isBG = 0;
-    char *args[t];
-
-    if (strcmp(a[t - 1], "&") == 0)
+    if (t < 3)
     {
-        isBG = 1;
-        t--;
+        printf("Not Enough Arguments Specified\n");
+        return;
     }
-    args[t] = NULL;
+    int pcs_id = atoi(a[1]), sg_num = atoi(a[2]), isPcs = 0;
+    for (int i = 0; i < MAX_BG_PCS; i++)
+    {
+        if (BG_Process[i]->processID == pcs_id)
+        {
+            isPcs = 1;
+            kill(BG_Process[i]->pid, sg_num);
+        }
+    }
+    if (!isPcs)
+        printf("Process with ID = %d not present\n", pcs_id);
+}
 
-    for (int i = 0; i < t; i++)
-        args[i] = a[i];
-
-    if (isBG)
-        execute_bg(args);
-    else
-        execute_fg(args);
-
-    return;
+void run_bg(char a[][sz], int t)
+{
+    if (t < 2)
+    {
+        printf("Not Enough Arguments Specified\n");
+        return;
+    }
+    int pcs_id = atoi(a[1]), isPcs = 0;
+    for (int i = 0; i < MAX_BG_PCS; i++)
+    {
+        if (BG_Process[i]->processID == pcs_id)
+        {
+            isPcs = 1;
+            if (strcmp(BG_Process[i]->process_status, "T") == 0)
+                kill(BG_Process[i]->pid, SIGCONT);
+        }
+    }
+    if (!isPcs)
+        printf("Process with ID = %d not present\n", pcs_id);
 }

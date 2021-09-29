@@ -1,20 +1,20 @@
-jobs -r
+vim &
+jobs
+bg 2
+jobs
+sig 1 20
+jobs
+bg 1
+jobs
+bg 1
+jobs
 exit
 gedit &
-vim &
 jobs
+sig 1 20
 jobs
-jobs -s
-exit
-gedit &
-vim &
+bg 1
 jobs
-jobs -s
-jobs -r
-gedit &
-jobs
-vim &
-jobs
-jobs -s
-jobs -r
+sig 1 20
+bg 1
 exit
