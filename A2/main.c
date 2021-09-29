@@ -131,6 +131,8 @@ void initialise()
     {
         BG_Process[i] = (struct Process *)malloc(sizeof(struct Process));
         BG_Process[i]->pid = 0;
+        memset(BG_Process[i]->process_name, 0, sizeof(BG_Process[i]->process_name));
+        memset(BG_Process[i]->process_status, 0, sizeof(BG_Process[i]->process_status));
     }
 }
 
@@ -211,6 +213,8 @@ void call_fn(char a[][sz], int t)
         sig(a, t);
     else if (strcmp(a[0], "bg") == 0)
         run_bg(a, t);
+    else if (strcmp(a[0], "fg") == 0)
+        run_fg(a, t);
     else if (strcmp(a[0], "history") == 0)
         query_history(a, t);
     else if (strcmp(a[0], "exit") == 0)

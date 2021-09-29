@@ -81,7 +81,22 @@ int min(int a, int b)
 {
     return a < b ? a : b;
 }
+
 int max(int a, int b)
 {
     return a > b ? a : b;
 }
+
+int my_compare(const void *a, const void *b)
+{
+    // a is a pointer into the array of pointers
+    struct Process *l = *(struct Process **)a;
+    struct Process *r = *(struct Process **)b;
+
+    return strcmp(l->process_name, r->process_name);
+}
+
+// void my_sort(struct Process *BG_Process[])
+// {
+//     qsort(BG_Process, MAX_BG_PCS, sizeof(BG_Process), &my_compare);
+// }
