@@ -2,7 +2,7 @@
 #include "functions.h"
 #include "pinfo.h"
 
-extern int process_num_added;
+extern int process_num_added, terminal_pid;
 extern struct Process *BG_Process[MAX_BG_PCS];
 
 void exit_bg_process(int num);
@@ -12,6 +12,7 @@ void jobs(char a[][sz], int t);
 void sig(char a[][sz], int t);
 void run_bg(char a[][sz], int t);
 void run_fg(char a[][sz], int t);
+void handler(int num);
 
 void process(char a[][sz], int t, char *home, char *prev)
 {
@@ -206,6 +207,19 @@ void run_bg(char a[][sz], int t)
         printf("Process with ID = %d not present\n", pcs_id);
 }
 
+void handler(int num)
+{
+    char cur_status[sz], pid[sz];
+    sprintf(pid, "%d", getpid());
+    prcs_stat(pid, cur_status);
+    // fprintf(stderr, "Status of %d: %s\n", getpid(), cur_status);
+    if (getpid() != terminal_pid)
+    {
+        kill(getpid(), 9);
+    }
+    return;
+}
+
 void run_fg(char a[][sz], int t)
 {
     if (t < 2)
@@ -256,6 +270,7 @@ void run_fg(char a[][sz], int t)
 
     // Reached till this point
     // => process has come to fg
+    signal(SIGINT, handler);
     int status;
     if (waitpid(pid, &status, WUNTRACED) > 0 && WIFSTOPPED(status) != 0)
     {

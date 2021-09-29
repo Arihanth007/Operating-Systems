@@ -9,5 +9,6 @@ void jobs(char a[][sz], int t);
 void sig(char a[][sz], int t);
 void run_bg(char a[][sz], int t);
 void run_fg(char a[][sz], int t);
+void handler(int num);
 
 #endif

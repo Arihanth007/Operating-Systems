@@ -77,6 +77,14 @@ void prcs_stat(char a[], char *status_arr)
         if (cnt == 2)
         {
             // printf("Process Status -- %s%s\n", stat_vals, pid == getpid() ? "+" : "");
+            if (pid == getpid())
+            {
+                char another_arr[sz];
+                strcpy(another_arr, stat_vals);
+                strcat(another_arr, "+");
+                strcpy(status_arr, another_arr);
+                break;
+            }
             strcpy(status_arr, stat_vals);
             break;
         }

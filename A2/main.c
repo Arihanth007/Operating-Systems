@@ -8,7 +8,7 @@
 
 char hostname[sz],
     username[sz], home[sz], prevdir[2][sz], currentdir[sz], dirprint[sz], hist[25][sz];
-int hist_sz = 0, process_num_added = 0;
+int hist_sz = 0, process_num_added = 0, terminal_pid;
 struct Process *BG_Process[MAX_BG_PCS];
 
 void scam()
@@ -43,16 +43,14 @@ void refresh()
     }
 }
 
-void free_allocated_mem()
+void clean_up()
 {
     for (int i = 0; i < MAX_BG_PCS; i++)
+    {
+        if (BG_Process[i]->pid != 0)
+            kill(BG_Process[i]->pid, SIGKILL);
         free(BG_Process[i]);
-}
-
-void handler(int num)
-{
-    // write(STDOUT_FILENO, "Encountered CTRL+C\n", 20);
-    return;
+    }
 }
 
 void load_history()
@@ -126,6 +124,7 @@ void initialise()
         perror("Get cwd: ");
     strcpy(prevdir[0], home);
     strcpy(prevdir[1], home);
+    terminal_pid = getpid();
     load_history();
     for (int i = 0; i < MAX_BG_PCS; i++)
     {
@@ -219,8 +218,8 @@ void call_fn(char a[][sz], int t)
         query_history(a, t);
     else if (strcmp(a[0], "exit") == 0)
     {
-        free_allocated_mem();
-        exit(0);
+        clean_up();
+        exit(EXIT_SUCCESS);
     }
     else //system commands
     {
@@ -351,7 +350,7 @@ int main(int argc, char **argv)
 {
     printf("%s\n\n", intro);
     initialise();
-    // signal(SIGINT, handler);
+    signal(SIGINT, handler);
 
     while (1)
     {
