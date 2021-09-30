@@ -1,20 +1,20 @@
-sleep 10 &
-sleep 5
-mymake
-exit
-pinfo
-sleep 2
-exit
-exit
-sleep 2
-sleep 2
-exit
-sleep 2
-exho h
-echo
-sleep 2
 clear
+vim &
+jobs
 gedit &
 jobs
-fg 1
+exit
+exit
+gedit &
+jobs
+sig 1 17
+jobs
+jobs
+sig 1 18
+jobs
+pinfo 63681
+sig 1 17
+pinfo 63681
+sig 1 20
+pinfo 63681
 exit

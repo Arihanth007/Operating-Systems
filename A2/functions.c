@@ -1,25 +1,29 @@
 #include "functions.h"
 #include "headers.h"
 
+extern int isExit;
+
 void get_input(char *ostr)
 {
     size_t size = 1024; // initial size of char array
     fflush(stdin);
     fflush(stdout);
-    char string[sz];
-    memset(string, 0, size);
-    char *tmp = &string[0], **string_pointer = &tmp; // double pointer to char array
-    size_t characters = getline(string_pointer, &size, stdin);
-    if (characters == -1)
+    char *inp_cmd = NULL;
+    size_t inp_len = 0;
+    int line_read = getline(&inp_cmd, &inp_len, stdin);
+
+    if (line_read <= 0)
     {
-        perror("Taking input: ");
+        perror("Taking input");
+        isExit = 1;
         return;
     }
 
-    char output[sz] = "";
-    my_tokenizer(string, output);
+    char output[sz] = {'\0'};
+    my_tokenizer(inp_cmd, output);
 
     strcpy(ostr, output);
+    free(inp_cmd);
 }
 
 void my_tokenizer(char *string, char *output)

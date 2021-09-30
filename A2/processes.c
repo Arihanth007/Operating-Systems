@@ -2,8 +2,9 @@
 #include "functions.h"
 #include "pinfo.h"
 
-extern int process_num_added, terminal_pid;
+extern int process_num_added, terminal_pid, all_bg_pcs[pid_sz], all_fg_pcs[pid_sz];
 extern struct Process *BG_Process[MAX_BG_PCS];
+char temp_name[sz];
 
 void exit_bg_process(int num);
 void execute_bg(char *args[]);
@@ -12,7 +13,8 @@ void jobs(char a[][sz], int t);
 void sig(char a[][sz], int t);
 void run_bg(char a[][sz], int t);
 void run_fg(char a[][sz], int t);
-void handler(int num);
+void terminate_fg(int num);
+void send_fg_bg(int num);
 
 void process(char a[][sz], int t, char *home, char *prev)
 {
@@ -56,11 +58,7 @@ void exit_bg_process(int num)
         if (pid != 0 && BG_Process[i]->pid == pid)
         {
             fprintf(stderr, "\n%s with %d exited %s", BG_Process[i]->process_name, pid, status ? "abnormally" : "normally\n");
-            // ser pid to 0 to indiacte that process is not active
-            BG_Process[i]->pid = 0;
-            // BG_Process[i]->processID = 0;
-            // memset(BG_Process[i]->process_name, 0, sizeof(BG_Process[i]->process_name));
-            // memset(BG_Process[i]->process_status, 0, sizeof(BG_Process[i]->process_status));
+            BG_Process[i]->pid = 0; // set pid to 0 to indiacte that process is not active
         }
     }
 }
@@ -70,6 +68,13 @@ void execute_bg(char *args[])
     char *pname = malloc(sz);
     char *st_val = malloc(sz);
     strcpy(pname, args[0]);
+    for (int i = 1; i < sz; i++)
+    {
+        if (args[i] == NULL)
+            break;
+        strcat(pname, " ");
+        strcat(pname, args[i]);
+    }
     signal(SIGCHLD, exit_bg_process); // checks for termination
     int forkReturn = fork();
     if (forkReturn == 0) // child
@@ -103,10 +108,20 @@ void execute_bg(char *args[])
 
 void execute_fg(char *args[])
 {
+    memset(temp_name, 0, sizeof(temp_name));
+    strcpy(temp_name, args[0]);
+    for (int i = 1; i < sz; i++)
+    {
+        if (args[i] == NULL)
+            break;
+        strcat(temp_name, " ");
+        strcat(temp_name, args[i]);
+    }
     int forkReturn = fork();
     if (forkReturn == 0)
     {
-        setpgid(0, 0); // set new group for child
+        if (setpgid(0, 0) < 0) // set new group for child
+            perror("Could set new group for child");
         char *command = args[0];
         if (execvp(command, args) < 0)
         {
@@ -117,9 +132,10 @@ void execute_fg(char *args[])
     else
     {
         int status;
-        if (waitpid(forkReturn, &status, WUNTRACED) > 0 && WIFSTOPPED(status) != 0)
-        { // Wait for process to complete
-        }
+        all_fg_pcs[forkReturn] = forkReturn;
+        if (waitpid(forkReturn, &status, WUNTRACED) > 0) // Wait for process to complete
+            if (WIFSTOPPED(status) == 0)                 // if process is completed
+                all_fg_pcs[forkReturn] = 0;
     }
 }
 
@@ -207,17 +223,41 @@ void run_bg(char a[][sz], int t)
         printf("Process with ID = %d not present\n", pcs_id);
 }
 
-void handler(int num)
+void terminate_fg(int num)
 {
-    char cur_status[sz], pid[sz];
-    sprintf(pid, "%d", getpid());
-    prcs_stat(pid, cur_status);
-    // fprintf(stderr, "Status of %d: %s\n", getpid(), cur_status);
-    if (getpid() != terminal_pid)
+    // fprintf(stdout, "\n");
+    for (int i = 0; i < pid_sz; i++)
     {
-        kill(getpid(), 9);
+        if (all_fg_pcs[i] != 0)
+        {
+            if (kill(all_fg_pcs[i], SIGINT) < 0)
+                perror("Kill failed");
+            all_fg_pcs[i] = 0;
+        }
     }
-    return;
+}
+
+void send_fg_bg(int num)
+{
+    // char wtf[sz] = {'\0'};
+    // sprintf(wtf, "\nTerminal: %d, Command: %d\n", terminal_pid, getpid());
+    // write(STDOUT_FILENO, wtf, strlen(wtf));
+    // fprintf(stdout, "\n");
+    for (int i = 0; i < pid_sz; i++)
+    {
+        if (all_fg_pcs[i] != 0)
+        {
+            if (kill(all_fg_pcs[i], 20) < 0)
+                perror("Kill failed");
+            // fprintf(stderr, "\nEntered just child (%d)\n", all_fg_pcs[i]);
+            BG_Process[process_num_added]->pid = all_fg_pcs[i];
+            BG_Process[process_num_added]->processID = process_num_added + 1;
+            strcpy(BG_Process[process_num_added]->process_name, temp_name);
+            strcpy(BG_Process[process_num_added]->process_status, "T");
+            process_num_added++;
+            all_fg_pcs[i] = 0;
+        }
+    }
 }
 
 void run_fg(char a[][sz], int t)
@@ -270,11 +310,17 @@ void run_fg(char a[][sz], int t)
 
     // Reached till this point
     // => process has come to fg
-    signal(SIGINT, handler);
+    all_fg_pcs[pid] = pid;
+    BG_Process[idx]->pid = 0;
+
+    // check for ctrl+C and ctrl+Z
+    signal(SIGINT, terminate_fg);
+    signal(SIGTSTP, send_fg_bg);
+
     int status;
-    if (waitpid(pid, &status, WUNTRACED) > 0 && WIFSTOPPED(status) != 0)
-    {
-    }
+    if (waitpid(pid, &status, WUNTRACED) > 0)
+        if (WIFSTOPPED(status) == 0)
+            all_fg_pcs[pid] = 0; // process terminated
 
     // Terminal regains control
     if (tcsetpgrp(STDIN_FILENO, getpgid(0)) < 0)
@@ -286,8 +332,4 @@ void run_fg(char a[][sz], int t)
     // Setting signals to default
     signal(SIGTTOU, SIG_DFL);
     signal(SIGTTIN, SIG_DFL);
-
-    // Assumed that process is no longer in bg
-    if (idx != -1)
-        BG_Process[idx]->pid = 0;
 }

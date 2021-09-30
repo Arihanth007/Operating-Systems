@@ -8,7 +8,8 @@
 
 char hostname[sz],
     username[sz], home[sz], prevdir[2][sz], currentdir[sz], dirprint[sz], hist[25][sz];
-int hist_sz = 0, process_num_added = 0, terminal_pid;
+int all_bg_pcs[pid_sz] = {0}, all_fg_pcs[pid_sz] = {0};
+int hist_sz = 0, process_num_added = 0, terminal_pid, isExit = 0;
 struct Process *BG_Process[MAX_BG_PCS];
 
 void scam()
@@ -350,13 +351,14 @@ int main(int argc, char **argv)
 {
     printf("%s\n\n", intro);
     initialise();
-    signal(SIGINT, handler);
+    signal(SIGINT, terminate_fg);
+    signal(SIGTSTP, send_fg_bg);
 
     while (1)
     {
-        // Additional flush conditions
-        fseek(stdin, 0, SEEK_END);
-        fseek(stdout, 0, SEEK_END);
+        if (isExit)
+            break;
+
         print_prompt();
 
         char string[sz], copy2[sz] = "";
