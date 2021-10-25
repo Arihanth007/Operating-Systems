@@ -118,6 +118,9 @@ struct proc
   struct inode *cwd;           // Current directory
   char name[16];               // Process name (debugging)
 
-  // Ones I've added
+  // additions
   int strace_mask; // mask exists if value is not 0
+  uint rtime;      // How long the process ran for
+  uint ctime;      // When the process was created
+  uint etime;      // When the process was exited
 };

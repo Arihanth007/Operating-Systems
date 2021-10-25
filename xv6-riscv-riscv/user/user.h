@@ -23,7 +23,9 @@ int getpid(void);
 char *sbrk(int);
 int sleep(int);
 int uptime(void);
+// additions
 int strace(int);
+int waitx(int *, int * /*wtime*/, int * /*rtime*/);
 
 // ulib.c
 int stat(const char *, struct stat *);

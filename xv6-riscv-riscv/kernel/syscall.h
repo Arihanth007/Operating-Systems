@@ -20,6 +20,8 @@
 #define SYS_link 19
 #define SYS_mkdir 20
 #define SYS_close 21
+// additions
 #define SYS_strace 22
+#define SYS_waitx 23
 
-#define TOTAL_SYSCALLS 22
+#define TOTAL_SYSCALLS 23
