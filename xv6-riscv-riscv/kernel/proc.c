@@ -60,7 +60,8 @@ int setproc_setpriority(int new_priority, int pid)
       found_pid = 1;
       old_priority = p->static_priority;
       p->static_priority = new_priority;
-      p->niceness = -1;
+      p->niceness = 5;
+      p->isReset = 1;
     }
     release(&p->lock);
   }
@@ -182,7 +183,8 @@ found:
   p->strace_mask = 0;
   p->static_priority = 60;
   p->scheduled_times = 0;
-  p->niceness = -1;
+  p->niceness = 5;
+  p->isReset = 0;
 
   // Allocate a trapframe page.
   if ((p->trapframe = (struct trapframe *)kalloc()) == 0)
@@ -599,6 +601,15 @@ void update_time()
       p->stime++;
       p->stime_lastrun++;
     }
+
+    if (p->isReset)
+    {
+      p->niceness = 5;
+      p->isReset = 0;
+    }
+    else if (p->rtime_lastrun > 0 || p->stime_lastrun > 0)
+      p->niceness = (int)(((p->stime_lastrun * 10) / (p->stime_lastrun + p->rtime_lastrun)));
+
     release(&p->lock);
   }
 }
@@ -685,10 +696,10 @@ void scheduler(void)
     else if (scheduler_type == PBS_NO)
     {
       struct proc *pick_me = 0;
-      uint64 least_ctime = __UINT64_MAX__;
       uint64 least_dp = __UINT64_MAX__;
       uint64 least_sch = __UINT64_MAX__;
-      int found_process = 0, niceness, DP = 0;
+      uint64 least_ctime = __UINT64_MAX__;
+      int found_process = 0, DP = 0;
 
       // find for process with least creation time
       for (p = proc; p < &proc[NPROC]; p++)
@@ -696,18 +707,8 @@ void scheduler(void)
         acquire(&p->lock);
         if (p->state == RUNNABLE)
         {
-          // determine niceness
-          niceness = 5;
-          // printf("rtime: %d, NC: %d\n", p->rtime_lastrun, p->niceness);
-          if (p->rtime_lastrun != 0 && p->niceness != -1)
-          {
-            printf("Entered here\n");
-            niceness = (int)(((p->stime_lastrun * 10) / (p->stime_lastrun + p->rtime_lastrun)));
-          }
-          p->niceness = niceness;
-
           // determine dynamic priority
-          DP = max(0, min(p->static_priority - niceness + 5, 100));
+          DP = max(0, min(p->static_priority - p->niceness + 5, 100));
 
           // Tie conditions
           if (DP > least_dp)
@@ -716,10 +717,8 @@ void scheduler(void)
             continue;
           }
           if (DP < least_dp)
-          {
             least_dp = DP;
-          }
-          else if (DP == least_dp)
+          else // DP == least_dp
           {
             if (p->scheduled_times > least_sch)
             {
@@ -728,17 +727,17 @@ void scheduler(void)
             }
             if (p->scheduled_times < least_sch)
               least_sch = p->scheduled_times;
-            else if (p->scheduled_times == least_sch)
+            else // p->scheduled_times == least_sch
             {
               if (p->ctime > least_ctime)
               {
                 release(&p->lock);
                 continue;
               }
+              least_ctime = p->ctime;
             }
           }
 
-          // printf("PID(%d) SP(%d) NC(%d) DP(%d)\n", p->pid, p->static_priority, p->niceness, DP);
           pick_me = p;
           found_process = 1;
         }

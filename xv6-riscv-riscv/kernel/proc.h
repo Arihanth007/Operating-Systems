@@ -131,4 +131,5 @@ struct proc
   int static_priority;  // value in [0,100], lower it is - more the priority
   int niceness;         // value in [0,10]
   uint scheduled_times; // number of times the process was scheduled
+  int isReset;          // reset value of niceness
 };
