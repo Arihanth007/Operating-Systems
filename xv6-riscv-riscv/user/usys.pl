@@ -38,3 +38,4 @@ entry("sleep");
 entry("uptime");
 entry("strace");
 entry("waitx");
+entry("setpriority");

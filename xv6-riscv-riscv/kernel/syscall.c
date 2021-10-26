@@ -103,6 +103,7 @@ extern uint64 sys_uptime(void);
 // additions
 extern uint64 sys_strace(void);
 extern uint64 sys_waitx(void);
+extern uint64 sys_setpriority(void);
 
 static uint64 (*syscalls[])(void) = {
     [SYS_fork] sys_fork,
@@ -128,6 +129,7 @@ static uint64 (*syscalls[])(void) = {
     [SYS_close] sys_close,
     [SYS_strace] sys_strace,
     [SYS_waitx] sys_waitx,
+    [SYS_setpriority] sys_setpriority,
 };
 
 char syscall_names[TOTAL_SYSCALLS][MAXPATH] = {
@@ -152,11 +154,12 @@ char syscall_names[TOTAL_SYSCALLS][MAXPATH] = {
     "link",
     "mkdir",
     "close",
-    "strace"
-    "waitx"};
+    "strace",
+    "waitx",
+    "setpriority"};
 
 int syscall_args[TOTAL_SYSCALLS] = {
-    0, 1, 1, 1, 3, 1, 2, 2, 1, 1, 0, 1, 1, 0, 2, 3, 3, 1, 2, 1, 1, 1, 0};
+    0, 1, 1, 1, 3, 1, 2, 2, 1, 1, 0, 1, 1, 0, 2, 3, 3, 1, 2, 1, 1, 1, 0, 2};
 
 void syscall(void)
 {

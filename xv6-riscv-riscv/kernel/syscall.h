@@ -23,5 +23,6 @@
 // additions
 #define SYS_strace 22
 #define SYS_waitx 23
+#define SYS_setpriority 24
 
-#define TOTAL_SYSCALLS 23
+#define TOTAL_SYSCALLS 24

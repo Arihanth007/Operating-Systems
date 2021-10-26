@@ -1,0 +1,13 @@
+{
+    "files.associations": {
+        "__mutex_base": "c",
+        "memory": "c",
+        "fcntl.h": "c",
+        "defs.h": "c",
+        "types.h": "c",
+        "param.h": "c",
+        "stat.h": "c",
+        "user.h": "c",
+        "cstdio": "c"
+    }
+}

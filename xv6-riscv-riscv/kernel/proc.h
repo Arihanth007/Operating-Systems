@@ -93,6 +93,8 @@ enum procstate
   ZOMBIE
 };
 
+int setproc_setpriority(int, int);
+
 // Per-process state
 struct proc
 {
@@ -119,8 +121,14 @@ struct proc
   char name[16];               // Process name (debugging)
 
   // additions
-  int strace_mask; // mask exists if value is not 0
-  uint rtime;      // How long the process ran for
-  uint ctime;      // When the process was created
-  uint etime;      // When the process was exited
+  int strace_mask;      // mask exists if value is not 0
+  uint ctime;           // When the process was created
+  uint etime;           // When the process was exited
+  uint rtime;           // How long the process ran for
+  uint stime;           // How long the process sleeps for
+  uint rtime_lastrun;   // How long the process ran for the last time it was scheduled
+  uint stime_lastrun;   // How long the process slept for the last time it was scheduled
+  int static_priority;  // value in [0,100], lower it is - more the priority
+  int niceness;         // value in [0,10]
+  uint scheduled_times; // number of times the process was scheduled
 };

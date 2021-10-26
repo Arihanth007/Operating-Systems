@@ -20,6 +20,60 @@ static void freeproc(struct proc *p);
 
 extern char trampoline[]; // trampoline.S
 
+// newly defined functions
+int max(int a, int b)
+{
+  return (a > b) ? a : b;
+}
+int min(int a, int b)
+{
+  return (a < b) ? a : b;
+}
+int get_scheduler(void)
+{
+#ifdef DEFAULT
+  return RR_NO;
+#endif
+
+#ifdef FCFS
+  return FCFS_NO;
+#endif
+
+#ifdef PBS
+  return PBS_NO;
+#endif
+
+#ifdef MLFQ
+  return MLFQ_NO;
+#endif
+}
+int setproc_setpriority(int new_priority, int pid)
+{
+  int found_pid = 0, old_priority = -1;
+
+  struct proc *p;
+  for (p = proc; p < &proc[NPROC]; p++)
+  {
+    acquire(&p->lock);
+    if (p->pid == pid)
+    {
+      found_pid = 1;
+      old_priority = p->static_priority;
+      p->static_priority = new_priority;
+      p->niceness = -1;
+    }
+    release(&p->lock);
+  }
+
+  if (!found_pid)
+    printf("Process with PID = %d doesn't exist\n");
+
+  if (new_priority < old_priority)
+    yield();
+
+  return old_priority;
+}
+
 // helps ensure that wakeups of wait()ing
 // parents are not lost. helps obey the
 // memory model when using p->parent.
@@ -126,6 +180,9 @@ found:
   p->pid = allocpid();
   p->state = USED;
   p->strace_mask = 0;
+  p->static_priority = 60;
+  p->scheduled_times = 0;
+  p->niceness = -1;
 
   // Allocate a trapframe page.
   if ((p->trapframe = (struct trapframe *)kalloc()) == 0)
@@ -153,6 +210,9 @@ found:
   p->rtime = 0;
   p->etime = 0;
   p->ctime = ticks;
+  p->stime = 0;
+  p->rtime_lastrun = 0;
+  p->stime_lastrun = 0;
 
   return p;
 }
@@ -177,6 +237,15 @@ freeproc(struct proc *p)
   p->killed = 0;
   p->xstate = 0;
   p->state = UNUSED;
+  p->strace_mask = 0;
+  p->ctime = 0;
+  p->rtime = 0;
+  p->etime = 0;
+  p->stime = 0;
+  p->rtime_lastrun = 0;
+  p->stime_lastrun = 0;
+  p->scheduled_times = 0;
+  p->niceness = 0;
 }
 
 // Create a user page table for a given process,
@@ -521,7 +590,15 @@ void update_time()
   {
     acquire(&p->lock);
     if (p->state == RUNNING)
+    {
       p->rtime++;
+      p->rtime_lastrun++;
+    }
+    if (p->state == SLEEPING)
+    {
+      p->stime++;
+      p->stime_lastrun++;
+    }
     release(&p->lock);
   }
 }
@@ -537,6 +614,7 @@ void scheduler(void)
 {
   struct proc *p;
   struct cpu *c = mycpu();
+  int scheduler_type = get_scheduler();
 
   c->proc = 0;
   for (;;)
@@ -544,23 +622,151 @@ void scheduler(void)
     // Avoid deadlock by ensuring that devices can interrupt.
     intr_on();
 
-    for (p = proc; p < &proc[NPROC]; p++)
+    if (scheduler_type == RR_NO)
     {
-      acquire(&p->lock);
-      if (p->state == RUNNABLE)
+      for (p = proc; p < &proc[NPROC]; p++)
       {
-        // Switch to chosen process.  It is the process's job
-        // to release its lock and then reacquire it
-        // before jumping back to us.
-        p->state = RUNNING;
-        c->proc = p;
-        swtch(&c->context, &p->context);
+        acquire(&p->lock);
 
-        // Process is done running for now.
-        // It should have changed its p->state before coming back.
-        c->proc = 0;
+        if (p->state == RUNNABLE)
+        {
+          // Switch to chosen process.  It is the process's job
+          // to release its lock and then reacquire it
+          // before jumping back to us.
+          p->state = RUNNING;
+          c->proc = p;
+          p->stime = 0;
+          swtch(&c->context, &p->context);
+
+          // Process is done running for now.
+          // It should have changed its p->state before coming back.
+          c->proc = 0;
+        }
+        release(&p->lock);
       }
-      release(&p->lock);
+    }
+
+    else if (scheduler_type == FCFS_NO)
+    {
+      struct proc *pick_me = 0;
+      uint64 least_ctime = __UINT64_MAX__;
+      int found_process = 0;
+
+      // find for process with least creation time
+      for (p = proc; p < &proc[NPROC]; p++)
+      {
+        acquire(&p->lock);
+        if ((p->state == RUNNABLE) && (p->ctime < least_ctime))
+        {
+          least_ctime = p->ctime;
+          pick_me = p;
+          found_process = 1;
+        }
+        release(&p->lock);
+      }
+
+      if (found_process)
+      {
+        acquire(&pick_me->lock);
+
+        if (pick_me->state == RUNNABLE)
+        {
+          pick_me->state = RUNNING;
+          c->proc = pick_me;
+          pick_me->stime = 0;
+          swtch(&c->context, &pick_me->context);
+
+          c->proc = 0;
+        }
+        release(&pick_me->lock);
+      }
+    }
+
+    else if (scheduler_type == PBS_NO)
+    {
+      struct proc *pick_me = 0;
+      uint64 least_ctime = __UINT64_MAX__;
+      uint64 least_dp = __UINT64_MAX__;
+      uint64 least_sch = __UINT64_MAX__;
+      int found_process = 0, niceness, DP = 0;
+
+      // find for process with least creation time
+      for (p = proc; p < &proc[NPROC]; p++)
+      {
+        acquire(&p->lock);
+        if (p->state == RUNNABLE)
+        {
+          // determine niceness
+          niceness = 5;
+          // printf("rtime: %d, NC: %d\n", p->rtime_lastrun, p->niceness);
+          if (p->rtime_lastrun != 0 && p->niceness != -1)
+          {
+            printf("Entered here\n");
+            niceness = (int)(((p->stime_lastrun * 10) / (p->stime_lastrun + p->rtime_lastrun)));
+          }
+          p->niceness = niceness;
+
+          // determine dynamic priority
+          DP = max(0, min(p->static_priority - niceness + 5, 100));
+
+          // Tie conditions
+          if (DP > least_dp)
+          {
+            release(&p->lock);
+            continue;
+          }
+          if (DP < least_dp)
+          {
+            least_dp = DP;
+          }
+          else if (DP == least_dp)
+          {
+            if (p->scheduled_times > least_sch)
+            {
+              release(&p->lock);
+              continue;
+            }
+            if (p->scheduled_times < least_sch)
+              least_sch = p->scheduled_times;
+            else if (p->scheduled_times == least_sch)
+            {
+              if (p->ctime > least_ctime)
+              {
+                release(&p->lock);
+                continue;
+              }
+            }
+          }
+
+          // printf("PID(%d) SP(%d) NC(%d) DP(%d)\n", p->pid, p->static_priority, p->niceness, DP);
+          pick_me = p;
+          found_process = 1;
+        }
+        release(&p->lock);
+      }
+
+      if (found_process)
+      {
+        acquire(&pick_me->lock);
+
+        if (pick_me->state == RUNNABLE)
+        {
+          pick_me->state = RUNNING;
+          c->proc = pick_me;
+          pick_me->stime = 0;
+          pick_me->stime_lastrun = 0;
+          pick_me->rtime_lastrun = 0;
+          pick_me->scheduled_times++;
+          swtch(&c->context, &pick_me->context);
+
+          c->proc = 0;
+        }
+        release(&pick_me->lock);
+      }
+    }
+
+    else if (scheduler_type == MLFQ_NO)
+    {
     }
   }
 }

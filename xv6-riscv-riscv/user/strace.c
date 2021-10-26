@@ -5,11 +5,11 @@
 
 int main(int argc, char *argv[])
 {
-    int EXIT_FAILURE = 1, EXIT_SUCCESS = 0, STDERR = 2;
+    int EXIT_FAILURE = 1, EXIT_SUCCESS = 0;
     // check for correct command from user
     if (argc <= 2 || (argv[1][0] < '0' || argv[1][0] > '9'))
     {
-        fprintf(STDERR, "strace usage: strace <mask(int[0,9])> <command[args]>\n");
+        printf("strace usage: strace <mask(int[0,9])> <command[args]>\n");
         exit(EXIT_FAILURE);
     }
 

@@ -126,9 +126,9 @@ sys_uptime(void)
 uint64
 sys_strace(void)
 {
-  int strace_mask, val;
-  if ((val = argint(0, &strace_mask)) < 0)
-    return val;
+  int strace_mask;
+  if (argint(0, &strace_mask) < 0)
+    return -1;
 
   int FAIL = -1, SUCCESS = 0;
   struct proc *p = myproc();
@@ -138,4 +138,18 @@ sys_strace(void)
 
   p->strace_mask = strace_mask;
   return SUCCESS;
+}
+
+uint64
+sys_setpriority(void)
+{
+  int niceness, pid;
+  if (argint(0, &niceness) < 0)
+    return -1;
+  if (argint(1, &pid) < 0)
+    return -1;
+
+  setproc_setpriority(niceness, pid);
+
+  return 0;
 }
