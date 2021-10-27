@@ -86,10 +86,12 @@ void usertrap(void)
   {
     int pool = p->pool;
     if (p->rtime_lastrun > mlfq_q.max_ticks[p->pool])
+    {
       pool = min(p->pool + 1, MAX_POOLS - 1);
-    remove_proc(p);
-    add_proc(pool, p);
-    yield();
+      remove_proc(p);
+      add_proc(pool, p);
+      yield();
+    }
   }
 
   usertrapret();
@@ -171,10 +173,12 @@ void kerneltrap()
     {
       int pool = p->pool;
       if (p->rtime_lastrun > mlfq_q.max_ticks[p->pool])
+      {
         pool = min(p->pool + 1, MAX_POOLS - 1);
-      remove_proc(p);
-      add_proc(pool, p);
-      yield();
+        remove_proc(p);
+        add_proc(pool, p);
+        yield();
+      }
     }
   }
 

@@ -859,6 +859,7 @@ void scheduler(void)
         {
           if (mlfq_q.queue[pool][i]->age_lastrun > MAX_AGE)
           {
+            // printf("AGING AVOIDED\n");
             struct proc *aged_p = mlfq_q.queue[pool][i];
             remove_proc(aged_p);
             add_proc(pool - 1, aged_p);
@@ -892,12 +893,17 @@ void scheduler(void)
 
         if (pick_me->state == RUNNABLE)
         {
-          // round robin
-          // int pool = pick_me->pool;
-          // if (pick_me->rtime_lastrun > mlfq_q.max_ticks[pick_me->pool])
-          //   pool = min(pick_me->pool + 1, MAX_POOLS - 1);
-          // remove_proc(pick_me);
-          // add_proc(pool, pick_me);
+          // for (int i = 0; i < MAX_POOLS; i++)
+          // {
+          //   printf("q%d : ", i);
+          //   for (int j = 0; j < mlfq_q.procs_per_pool[i]; j++)
+          //   {
+          //     if (mlfq_q.queue[i][j]->state == RUNNABLE || mlfq_q.queue[i][j]->state == RUNNING)
+          //       printf("%d(%d) ", mlfq_q.queue[i][j]->pid, mlfq_q.queue[i][j]->rtime_lastrun);
+          //   }
+          //   printf("\n");
+          // }
+          // printf("\n");
 
           pick_me->state = RUNNING;
           pick_me->stime_lastrun = 0;
