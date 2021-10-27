@@ -20,6 +20,8 @@ static void freeproc(struct proc *p);
 
 extern char trampoline[]; // trampoline.S
 
+struct mlfq_queue mlfq_q;
+
 // newly defined functions
 int max(int a, int b)
 {
@@ -29,6 +31,7 @@ int min(int a, int b)
 {
   return (a < b) ? a : b;
 }
+// return type of scheduler
 int get_scheduler(void)
 {
 #ifdef DEFAULT
@@ -47,6 +50,7 @@ int get_scheduler(void)
   return MLFQ_NO;
 #endif
 }
+// implementation of setpriority
 int setproc_setpriority(int new_priority, int pid)
 {
   int found_pid = 0, old_priority = -1;
@@ -69,10 +73,49 @@ int setproc_setpriority(int new_priority, int pid)
   if (!found_pid)
     printf("Process with PID = %d doesn't exist\n");
 
-  if (new_priority < old_priority)
+  if (get_scheduler() == PBS_NO && new_priority < old_priority)
     yield();
 
   return old_priority;
+}
+// remove a proccess to the mlfq queue
+void remove_proc(struct proc *p)
+{
+  int index, pool, pool_count;
+  pool = p->pool;
+  pool_count = mlfq_q.procs_per_pool[pool];
+  index = -1;
+
+  // find process index in mlfq queue
+  for (int i = 0; i < pool_count; i++)
+    if (mlfq_q.queue[pool][i]->pid == p->pid)
+      index = i;
+
+  // process not present in queue
+  if (index == -1)
+    return;
+
+  // remove process and move every process after it by one index
+  for (int i = index; i < pool_count - 1; i++)
+    mlfq_q.queue[pool][i] = mlfq_q.queue[pool][i + 1];
+
+  // update queue and current process values
+  mlfq_q.procs_per_pool[pool]--;
+  p->pool = -1;
+}
+// add a process to the mlfq queue
+void add_proc(int pool, struct proc *p)
+{
+  // make sure pool is between 0 and 4
+  pool = max(0, min(pool, MAX_POOLS - 1));
+  int pool_count = mlfq_q.procs_per_pool[pool];
+
+  // add process to queue
+  mlfq_q.queue[pool][pool_count] = p;
+  mlfq_q.procs_per_pool[pool]++;
+  // update process
+  p->pool = pool;
+  p->age_lastrun = 0;
 }
 
 // helps ensure that wakeups of wait()ing
@@ -180,11 +223,23 @@ allocproc(void)
 found:
   p->pid = allocpid();
   p->state = USED;
+  // added
   p->strace_mask = 0;
-  p->static_priority = 60;
+  p->ctime = ticks;
+  p->etime = 0;
+  p->rtime = 0;
+  p->stime = 0;
+  p->wtime = 0;
+  p->rtime_lastrun = 0;
+  p->stime_lastrun = 0;
+  p->age_lastrun = 0;
   p->scheduled_times = 0;
+  p->static_priority = 60;
   p->niceness = 5;
   p->isReset = 0;
+  p->pool = 0;
+  for (int pool = 0; pool < MAX_POOLS; pool++)
+    p->pool_time[pool] = 0;
 
   // Allocate a trapframe page.
   if ((p->trapframe = (struct trapframe *)kalloc()) == 0)
@@ -208,13 +263,6 @@ found:
   memset(&p->context, 0, sizeof(p->context));
   p->context.ra = (uint64)forkret;
   p->context.sp = p->kstack + PGSIZE;
-  // time init
-  p->rtime = 0;
-  p->etime = 0;
-  p->ctime = ticks;
-  p->stime = 0;
-  p->rtime_lastrun = 0;
-  p->stime_lastrun = 0;
 
   return p;
 }
@@ -239,15 +287,23 @@ freeproc(struct proc *p)
   p->killed = 0;
   p->xstate = 0;
   p->state = UNUSED;
+  // added
   p->strace_mask = 0;
   p->ctime = 0;
-  p->rtime = 0;
   p->etime = 0;
+  p->rtime = 0;
   p->stime = 0;
+  p->wtime = 0;
   p->rtime_lastrun = 0;
   p->stime_lastrun = 0;
+  p->age_lastrun = 0;
   p->scheduled_times = 0;
+  p->static_priority = 0;
   p->niceness = 0;
+  p->isReset = 0;
+  p->pool = 0;
+  for (int pool = 0; pool < MAX_POOLS; pool++)
+    p->pool_time[pool] = 0;
 }
 
 // Create a user page table for a given process,
@@ -308,6 +364,15 @@ uchar initcode[] = {
 // Set up first user process.
 void userinit(void)
 {
+  // for MLFQ
+  for (int i = 0; i < MAX_POOLS; i++)
+  {
+    mlfq_q.max_ticks[i] = (int)1 << i;
+    mlfq_q.procs_per_pool[i] = 0;
+    for (int j = 0; j < NPROC; j++)
+      mlfq_q.queue[i][j] = 0;
+  }
+
   struct proc *p;
 
   p = allocproc();
@@ -326,6 +391,12 @@ void userinit(void)
   p->cwd = namei("/");
 
   p->state = RUNNABLE;
+
+  // every new process gets added to the queue
+  if (get_scheduler() == MLFQ_NO)
+  {
+    add_proc(0, p);
+  }
 
   release(&p->lock);
 }
@@ -403,6 +474,13 @@ int fork(void)
 
   acquire(&np->lock);
   np->state = RUNNABLE;
+
+  // every new process gets added to the queue
+  if (get_scheduler() == MLFQ_NO)
+  {
+    add_proc(0, np);
+  }
+
   release(&np->lock);
 
   return pid;
@@ -596,10 +674,19 @@ void update_time()
       p->rtime++;
       p->rtime_lastrun++;
     }
-    if (p->state == SLEEPING)
+    else if (p->state == SLEEPING)
     {
       p->stime++;
       p->stime_lastrun++;
+    }
+    else if (p->state == RUNNABLE)
+    {
+      p->wtime++;
+      p->age_lastrun++;
+    }
+    if (p->state == RUNNING || p->state == RUNNABLE)
+    {
+      p->pool_time[p->pool]++;
     }
 
     if (p->isReset)
@@ -607,7 +694,7 @@ void update_time()
       p->niceness = 5;
       p->isReset = 0;
     }
-    else if (p->rtime_lastrun > 0 || p->stime_lastrun > 0)
+    else if (p->rtime_lastrun > 0 || p->stime_lastrun > 0) // denominatior > 0
       p->niceness = (int)(((p->stime_lastrun * 10) / (p->stime_lastrun + p->rtime_lastrun)));
 
     release(&p->lock);
@@ -646,7 +733,6 @@ void scheduler(void)
           // before jumping back to us.
           p->state = RUNNING;
           c->proc = p;
-          p->stime = 0;
           swtch(&c->context, &p->context);
 
           // Process is done running for now.
@@ -684,7 +770,6 @@ void scheduler(void)
         {
           pick_me->state = RUNNING;
           c->proc = pick_me;
-          pick_me->stime = 0;
           swtch(&c->context, &pick_me->context);
 
           c->proc = 0;
@@ -751,11 +836,10 @@ void scheduler(void)
         if (pick_me->state == RUNNABLE)
         {
           pick_me->state = RUNNING;
-          c->proc = pick_me;
-          pick_me->stime = 0;
           pick_me->stime_lastrun = 0;
           pick_me->rtime_lastrun = 0;
           pick_me->scheduled_times++;
+          c->proc = pick_me;
           swtch(&c->context, &pick_me->context);
 
           c->proc = 0;
@@ -766,6 +850,68 @@ void scheduler(void)
 
     else if (scheduler_type == MLFQ_NO)
     {
+      // check for aging to prevent starvation
+      // pool 0 doesn't starve
+      for (int pool = 1; pool < MAX_POOLS; pool++)
+      {
+        int pool_count = mlfq_q.procs_per_pool[pool];
+        for (int i = 0; i < pool_count; i++)
+        {
+          if (mlfq_q.queue[pool][i]->age_lastrun > MAX_AGE)
+          {
+            struct proc *aged_p = mlfq_q.queue[pool][i];
+            remove_proc(aged_p);
+            add_proc(pool - 1, aged_p);
+          }
+        }
+      }
+
+      // pick the processe to run
+      int found_process = 0;
+      struct proc *pick_me = 0;
+
+      for (int pool = 0; pool < MAX_POOLS; pool++)
+      {
+        int pool_count = mlfq_q.procs_per_pool[pool];
+        for (int i = 0; i < pool_count; i++)
+        {
+          if (mlfq_q.queue[pool][i]->state == RUNNABLE)
+          {
+            pick_me = mlfq_q.queue[pool][i];
+            found_process = 1;
+            break;
+          }
+        }
+        if (found_process)
+          break;
+      }
+
+      if (found_process)
+      {
+        acquire(&pick_me->lock);
+
+        if (pick_me->state == RUNNABLE)
+        {
+          // round robin
+          // int pool = pick_me->pool;
+          // if (pick_me->rtime_lastrun > mlfq_q.max_ticks[pick_me->pool])
+          //   pool = min(pick_me->pool + 1, MAX_POOLS - 1);
+          // remove_proc(pick_me);
+          // add_proc(pool, pick_me);
+
+          pick_me->state = RUNNING;
+          pick_me->stime_lastrun = 0;
+          pick_me->rtime_lastrun = 0;
+          pick_me->age_lastrun = 0;
+          pick_me->scheduled_times++;
+          c->proc = pick_me;
+
+          swtch(&c->context, &pick_me->context);
+
+          c->proc = 0;
+        }
+        release(&pick_me->lock);
+      }
     }
   }
 }
@@ -894,6 +1040,10 @@ int kill(int pid)
       {
         // Wake process from sleep().
         p->state = RUNNABLE;
+        if (get_scheduler() == MLFQ_NO)
+        {
+          add_proc(0, p);
+        }
       }
       release(&p->lock);
       return 0;

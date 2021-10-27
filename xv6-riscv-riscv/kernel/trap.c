@@ -78,11 +78,19 @@ void usertrap(void)
   if (p->killed)
     exit(-1);
 
-// give up the CPU if this is a timer interrupt.
-#ifdef DEFAULT
-  if (which_dev == 2)
+  int ST = get_scheduler();
+  // give up the CPU if this is a timer interrupt.
+  if (ST == RR_NO && which_dev == 2)
     yield();
-#endif
+  if (ST == MLFQ_NO && which_dev == 2)
+  {
+    int pool = p->pool;
+    if (p->rtime_lastrun > mlfq_q.max_ticks[p->pool])
+      pool = min(p->pool + 1, MAX_POOLS - 1);
+    remove_proc(p);
+    add_proc(pool, p);
+    yield();
+  }
 
   usertrapret();
 }
@@ -152,11 +160,23 @@ void kerneltrap()
     panic("kerneltrap");
   }
 
-// give up the CPU if this is a timer interrupt.
-#ifdef DEFAULT
-  if (which_dev == 2 && myproc() != 0 && myproc()->state == RUNNING)
+  int ST = get_scheduler();
+  // give up the CPU if this is a timer interrupt.
+  if (ST == RR_NO && which_dev == 2 && myproc() != 0 && myproc()->state == RUNNING)
     yield();
-#endif
+  if (ST == MLFQ_NO && which_dev == 2)
+  {
+    struct proc *p = myproc();
+    if (p != 0 && p->state == RUNNING)
+    {
+      int pool = p->pool;
+      if (p->rtime_lastrun > mlfq_q.max_ticks[p->pool])
+        pool = min(p->pool + 1, MAX_POOLS - 1);
+      remove_proc(p);
+      add_proc(pool, p);
+      yield();
+    }
+  }
 
   // the yield() may have caused some traps to occur,
   // so restore trap registers for use by kernelvec.S's sepc instruction.

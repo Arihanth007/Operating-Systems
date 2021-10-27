@@ -17,8 +17,7 @@ int main(int argc, char *argv[])
 
     // copy the command to a new array
     char *new_args[MAXARG];
-    int i;
-    for (i = 0; i < argc && i < MAXARG; i++)
+    for (int i = 0; i < argc && i < MAXARG; i++)
         new_args[i] = argv[i + 2];
 
     exec(new_args[0], new_args);

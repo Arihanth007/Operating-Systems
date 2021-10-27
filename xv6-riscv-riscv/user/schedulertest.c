@@ -44,7 +44,8 @@ int main()
   }
   for (; n > 0; n--)
   {
-    if (waitx(0, &wtime, &rtime) >= 0)
+    // had to chage from original code since rtime and wtimewere swapped
+    if (waitx(0, &rtime, &wtime) >= 0)
     {
       trtime += rtime;
       twtime += wtime;

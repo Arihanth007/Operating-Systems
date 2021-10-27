@@ -93,7 +93,9 @@ enum procstate
   ZOMBIE
 };
 
-int setproc_setpriority(int, int);
+// custom defines
+#define MAX_POOLS 5
+#define MAX_AGE 25
 
 // Per-process state
 struct proc
@@ -121,15 +123,37 @@ struct proc
   char name[16];               // Process name (debugging)
 
   // additions
-  int strace_mask;      // mask exists if value is not 0
-  uint ctime;           // When the process was created
-  uint etime;           // When the process was exited
-  uint rtime;           // How long the process ran for
-  uint stime;           // How long the process sleeps for
-  uint rtime_lastrun;   // How long the process ran for the last time it was scheduled
-  uint stime_lastrun;   // How long the process slept for the last time it was scheduled
-  int static_priority;  // value in [0,100], lower it is - more the priority
-  int niceness;         // value in [0,10]
-  uint scheduled_times; // number of times the process was scheduled
-  int isReset;          // reset value of niceness
+  int strace_mask;           // mask exists if value is not 0
+  uint ctime;                // When the process was created
+  uint etime;                // When the process was exited
+  uint rtime;                // How long the process ran for
+  uint stime;                // How long the process sleeps for
+  uint wtime;                // How long the process waits for
+  uint rtime_lastrun;        // How long the process ran for the last time it was scheduled
+  uint stime_lastrun;        // How long the process slept for the last time it was scheduled
+  uint age_lastrun;          // How long the process waited for the last time it was scheduled
+  uint scheduled_times;      // number of times the process was scheduled
+  int static_priority;       // value in [0,100], lower it is - more the priority
+  int niceness;              // value in [0,10]
+  int isReset;               // reset value of niceness
+  int pool;                  // which priority pool the process belongs to in [0,1,2,3,4]
+  uint pool_time[MAX_POOLS]; // how much time the process spent in each pool
 };
+
+struct mlfq_queue
+{
+  struct proc *queue[MAX_POOLS][NPROC];
+  int max_ticks[MAX_POOLS];      // maximum number of ticks the process can run for in each pool
+  int procs_per_pool[MAX_POOLS]; // total number of processes in each pool
+};
+
+// custom functions
+int max(int, int);
+int min(int, int);
+int setproc_setpriority(int, int);
+int get_scheduler(void);
+void remove_proc(struct proc *);
+void add_proc(int, struct proc *);
+
+// variables other files can access
+extern struct mlfq_queue mlfq_q;
