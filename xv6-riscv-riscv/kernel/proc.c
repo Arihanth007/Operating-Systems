@@ -78,6 +78,20 @@ int setproc_setpriority(int new_priority, int pid)
 
   return old_priority;
 }
+// add a process to the mlfq queue
+void add_proc(int pool, struct proc *p)
+{
+  // make sure pool is between 0 and 4
+  pool = max(0, min(pool, MAX_POOLS - 1));
+  int pool_count = mlfq_q.procs_per_pool[pool];
+
+  // add process to queue
+  mlfq_q.queue[pool][pool_count] = p;
+  mlfq_q.procs_per_pool[pool]++;
+  // update process
+  p->pool = pool;
+  p->age_lastrun = 0;
+}
 // remove a proccess to the mlfq queue
 void remove_proc(struct proc *p)
 {
@@ -102,20 +116,6 @@ void remove_proc(struct proc *p)
   // update queue and current process values
   mlfq_q.procs_per_pool[pool]--;
   p->pool = -1;
-}
-// add a process to the mlfq queue
-void add_proc(int pool, struct proc *p)
-{
-  // make sure pool is between 0 and 4
-  pool = max(0, min(pool, MAX_POOLS - 1));
-  int pool_count = mlfq_q.procs_per_pool[pool];
-
-  // add process to queue
-  mlfq_q.queue[pool][pool_count] = p;
-  mlfq_q.procs_per_pool[pool]++;
-  // update process
-  p->pool = pool;
-  p->age_lastrun = 0;
 }
 
 // helps ensure that wakeups of wait()ing
@@ -697,6 +697,12 @@ void update_time()
     else if (p->rtime_lastrun > 0 || p->stime_lastrun > 0) // denominatior > 0
       p->niceness = (int)(((p->stime_lastrun * 10) / (p->stime_lastrun + p->rtime_lastrun)));
 
+    // only for bonus
+    // int is_print_bonus = 1;
+    // if (is_print_bonus && get_scheduler() == MLFQ_NO)
+    //   if ((p->pid > 2) && (p->state == RUNNING || p->state == RUNNABLE || p->state == SLEEPING))
+    //     printf("Process P%d is in Q%d at %d\n", p->pid, p->pool, ticks);
+
     release(&p->lock);
   }
 }
@@ -1108,6 +1114,16 @@ void procdump(void)
   char *state;
 
   printf("\n");
+  int ST = get_scheduler();
+  if (ST == RR_NO)
+    printf("PID\tState  rtime  wtime  nrun\n");
+  else if (ST == FCFS_NO)
+    printf("PID\tState  rtime  wtime  nrun\n");
+  else if (ST == PBS_NO)
+    printf("PID  Priority   State  rtime wtime rtime_ls  stime_ls  nrun\n");
+  else if (ST == MLFQ_NO)
+    printf("PID Priority\tQ State\trtime wtime rtime_ls  stime_ls  nrun\tq0 q1 q2 q3 q4\n");
+
   for (p = proc; p < &proc[NPROC]; p++)
   {
     if (p->state == UNUSED)
@@ -1116,7 +1132,27 @@ void procdump(void)
       state = states[p->state];
     else
       state = "???";
-    printf("%d %s %s", p->pid, state, p->name);
+
+    if (ST == RR_NO)
+      printf("%d\t%s\t%d\t%d\t%d", p->pid, state, p->rtime, p->wtime, p->scheduled_times);
+    else if (ST == FCFS_NO)
+      printf("%d\t%s\t%d\t%d\t%d", p->pid, state, p->rtime, p->wtime, p->scheduled_times);
+    else if (ST == PBS_NO)
+      printf("%d\t%d\t%s\t%d\t%d\t%d\t%d\t%d",
+             p->pid, p->static_priority, state, p->rtime, p->wtime,
+             p->rtime_lastrun, p->stime_lastrun, p->scheduled_times);
+    else if (ST == MLFQ_NO)
+    {
+      int index = -1;
+      for (int pool = 0; pool < MAX_POOLS; pool++)
+        for (int i = 0; i < mlfq_q.procs_per_pool[pool]; i++)
+          if (p->pid == mlfq_q.queue[pool][i]->pid)
+            index = i;
+      printf("%d\t%d\t%d  %s  %d\t%d\t%d\t%d\t%d\t%d  %d  %d  %d  %d",
+             p->pid, index, p->pool, state, p->rtime, p->wtime,
+             p->rtime_lastrun, p->stime_lastrun, p->scheduled_times,
+             p->pool_time[0], p->pool_time[1], p->pool_time[2], p->pool_time[3], p->pool_time[4]);
+    }
     printf("\n");
   }
 }

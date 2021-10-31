@@ -167,22 +167,24 @@ void syscall(void)
   struct proc *p = myproc();
 
   num = p->trapframe->a7;
+
   if (num > 0 && num < NELEM(syscalls) && syscalls[num])
   {
+    int args_print[] = {p->trapframe->a0, p->trapframe->a1, p->trapframe->a2,
+                        p->trapframe->a3, p->trapframe->a4, p->trapframe->a5};
     p->trapframe->a0 = syscalls[num]();
 
     // strace function logic
     int two_pow_num = 1 << num; // 2^num
     if (p->strace_mask & two_pow_num)
     {
-      int idx = num - 1, argument_id, argument; // since our arrays are 0-based indexing
+      int idx = num - 1, argument_id; // since our arrays are 0-based indexing
 
       printf("%d: syscall %s ( ", p->pid, syscall_names[idx]);
+
       for (argument_id = 0; argument_id < syscall_args[idx]; argument_id++)
-      {
-        argint(argument_id, &argument);
-        printf("%d ", argument);
-      }
+        printf("%d ", args_print[argument_id]);
+
       printf(") -> %d\n", p->trapframe->a0);
     }
   }
