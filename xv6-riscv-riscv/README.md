@@ -26,6 +26,7 @@ strace mask command [args]
 -   The syscall prints information relevant to the command.
 -   The structure - proc is modified to hold the value mask in `proc.h`.
 -   We define strace in `syscall.h` and have the logic for it in `syscall.c`.
+-   `strace.c` has been added to `user` folder and `makefile` was updated accordingly.
 -   We also handle the child processes by setting the mask of the child equal to the parent in `proc.c`.
 
 ## Task 2 - scheduling
@@ -40,7 +41,9 @@ The way the scheduler decides which process came first is by looking at the crea
 
 For this we store the creation time of every process as a new variable called `ctime` in the proc structure and assign it in the `allocproc` fucntion when the process starts.
 
-This algortihm is preemtive which means that the clock interrupt is disabled in `usertrap` and `kerneltrap`, thus being able to complete a process before moving on to the next one. This modification was done in `trap.c`.
+The logic is implemented in `scheduler` fucntion in `proc.c`.
+
+This algortihm is non-preemtive which means that the clock interrupt is disabled in `usertrap` and `kerneltrap`, thus being able to complete a process before moving on to the next one. This modification was done in `trap.c`.
 
 ### PBS
 
@@ -54,7 +57,9 @@ The syscall `setpriority` can change the value of static priority of a process a
 
 If multiple processes have the same priority then the tie is broken by considering the process that has been scheduled fewer times. If that were a tie too then we look at the process with the older creation time.
 
-This algortihm is preemtive which means that the clock interrupt is disabled in `usertrap` and `kerneltrap`. This modification was done in `trap.c`.
+The logic is implemented in `scheduler` fucntion in `proc.c`.
+
+This algortihm is non-preemtive which means that the clock interrupt is disabled in `usertrap` and `kerneltrap`. This modification was done in `trap.c`.
 
 ### MLFQ
 
@@ -70,7 +75,7 @@ Further, to prevent starvation we have a `MAX_AGE` that a porcess can reach age 
 
 In our `usertrap` and `kernertrap` functions we check to see if priority need to be changed based on how much time the process spent in the pool and make appropriate changes before yielding.
 
-A process voluntarily giving up control of the CPU (for doing I/O work, etc) is smart since it won't be needing the CPU time. By doing this, the process gets placed at the end of the queue and can resume its CPU intense work after its done with I/O upto the number of ticks allowed in that pool. This way they process can maximise its CPU utilisation. Note that by giving up the CPU, it doesn't register a tick, hence it is staying in the same priority pool.
+A process voluntarily giving up control of the CPU (for doing I/O work, etc) is smart since it won't be needing the CPU time. By doing this, the process gets placed at the end of the queue and can resume its CPU intense work after its done with I/O upto the number of ticks allowed in that pool. This way they process can maximise its CPU utilisation. Note that by giving up the CPU, it generally doesn't take more than a tick, enabling it to stay in the same priority pool.
 
 ### Analysis
 
@@ -90,3 +95,5 @@ Analysis was done with 1 CPU for all scheduling tasks to maintain interpretabili
 ## Bonus
 
 The output of MLFQ was printed using the `update_time` function in `proc.c` and saved the output to `outputforbonus.txt`. This data was then graphed to obtain `MLFQ_PLOT.png`.
+
+![alt text](MLFQ_PLOT.png)
