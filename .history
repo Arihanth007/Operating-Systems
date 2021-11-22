@@ -1,20 +1,20 @@
-history
-history 15
-pinfo
-repeat 2 gedit &
-echo hello
-vim &
+sort < cd.h
+sort < cd.h
+sort < cd.h > zzz.txt
+sort < cd.h >> zzz.txt
+sort < cd.h > zzz.txt
+sort < cd.h > z.txt
+sort < cd.h >> zzz.txt
+exit
+sort < cd.h >> zzz.txt
+sort < cd.h >> zzz.txt
+sort < cd.h >> zzz.txt
+sort < cd.h > zzz.txt
+exit
+exit
+pwd
+cd ..
+cd ..
+clear
+cd -
 cd ~
-cd -
-cd ..
-cd ..
-cd -
-cd -
-cd -
-cd -
-cd ~
-repeat 2 sleep 5
-repeat 2 gedit
-cd ..
-cd .
-cd ..

@@ -1,20 +1,20 @@
+fg 2
+joba
+jobs
+jobs
+ps
+kill 21961
+kill 21961 9
+sig 21961
+kill -9 21961
 clear
-vim &
+joba
 jobs
-gedit &
+fg 3
 jobs
-exit
-exit
-gedit &
-jobs
-sig 1 17
-jobs
-jobs
-sig 1 18
-jobs
-pinfo 63681
-sig 1 17
-pinfo 63681
-sig 1 20
-pinfo 63681
-exit
+clear
+ls
+clear
+htop
+htop
+htop

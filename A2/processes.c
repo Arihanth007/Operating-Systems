@@ -2,11 +2,12 @@
 #include "functions.h"
 #include "pinfo.h"
 
-extern int process_num_added, terminal_pid, all_bg_pcs[pid_sz], all_fg_pcs[pid_sz];
+extern int process_num_added, terminal_pid, all_bg_pcs[pid_sz], all_fg_pcs[pid_sz], only_fg_pcs;
 extern struct Process *BG_Process[MAX_BG_PCS];
+extern void print_prompt(void);
 char temp_name[sz];
 
-void exit_bg_process(int num);
+void sigchldHandler(int num);
 void execute_bg(char *args[]);
 void execute_fg(char *args[]);
 void jobs(char a[][sz], int t);
@@ -40,26 +41,42 @@ void process(char a[][sz], int t, char *home, char *prev)
     return;
 }
 
-void exit_bg_process(int num)
+void sigchldHandler(int num)
 {
-    int status, pid;
+    pid_t pid;
+    int status;
     char buf[sz] = "";
 
     // Checks for terminated child processes
-    if ((pid = waitpid(-1, &status, WNOHANG)) < 0)
+    while ((pid = waitpid(-1, &status, WNOHANG)) > 0)
     {
+        status = WIFEXITED(status);
+        if(pid == only_fg_pcs)
+        {
+            kill(pid, 20);
+            BG_Process[process_num_added]->pid = pid;
+            BG_Process[process_num_added]->processID = process_num_added + 1;
+            strcpy(BG_Process[process_num_added]->process_name, temp_name);
+            strcpy(BG_Process[process_num_added]->process_status, "T");
+            process_num_added++;
+            only_fg_pcs = 0;
+        }
+        else
+        {
+            for(int i = 0; i < process_num_added; i++)
+            {
+                if (BG_Process[i]->pid == pid)
+                {
+                    fprintf(stderr, "\n%s with %d exited %s", BG_Process[i]->process_name, pid, status ? "abnormally" : "normally\n");
+                    BG_Process[i]->pid = 0;
+                    break;
+                }
+            }
+        }
+
         if (errno != ECHILD)
             perror("Child process termination");
         return;
-    }
-
-    for (int i = 0; i < MAX_BG_PCS; i++)
-    {
-        if (pid != 0 && BG_Process[i]->pid == pid)
-        {
-            fprintf(stderr, "\n%s with %d exited %s", BG_Process[i]->process_name, pid, status ? "abnormally" : "normally\n");
-            BG_Process[i]->pid = 0; // set pid to 0 to indiacte that process is not active
-        }
     }
 }
 
@@ -75,7 +92,7 @@ void execute_bg(char *args[])
         strcat(pname, " ");
         strcat(pname, args[i]);
     }
-    signal(SIGCHLD, exit_bg_process); // checks for termination
+    // signal(SIGCHLD, sigchldHandler); // checks for termination
     int forkReturn = fork();
     if (forkReturn == 0) // child
     {
@@ -120,8 +137,6 @@ void execute_fg(char *args[])
     int forkReturn = fork();
     if (forkReturn == 0)
     {
-        if (setpgid(0, 0) < 0) // set new group for child
-            perror("Could set new group for child");
         char *command = args[0];
         if (execvp(command, args) < 0)
         {
@@ -132,10 +147,13 @@ void execute_fg(char *args[])
     else
     {
         int status;
-        all_fg_pcs[forkReturn] = forkReturn;
-        if (waitpid(forkReturn, &status, WUNTRACED) > 0) // Wait for process to complete
-            if (WIFSTOPPED(status) == 0)                 // if process is completed
-                all_fg_pcs[forkReturn] = 0;
+        only_fg_pcs = forkReturn;
+        if (waitpid(forkReturn, &status, WUNTRACED) > 0)
+        {
+            if (WIFSTOPPED(status))
+                printf("Suspending Process %d\n", forkReturn);
+            only_fg_pcs = -1;
+        }
     }
 }
 
@@ -225,38 +243,27 @@ void run_bg(char a[][sz], int t)
 
 void terminate_fg(int num)
 {
-    // fprintf(stdout, "\n");
-    for (int i = 0; i < pid_sz; i++)
+    if(only_fg_pcs == -1)
     {
-        if (all_fg_pcs[i] != 0)
-        {
-            if (kill(all_fg_pcs[i], SIGINT) < 0)
-                perror("Kill failed");
-            all_fg_pcs[i] = 0;
-        }
+        write(STDOUT_FILENO, "\n", 1);
+        print_prompt();
     }
+    only_fg_pcs = -1;
 }
 
 void send_fg_bg(int num)
 {
-    // char wtf[sz] = {'\0'};
-    // sprintf(wtf, "\nTerminal: %d, Command: %d\n", terminal_pid, getpid());
-    // write(STDOUT_FILENO, wtf, strlen(wtf));
-    // fprintf(stdout, "\n");
-    for (int i = 0; i < pid_sz; i++)
+    if(only_fg_pcs != -1)
     {
-        if (all_fg_pcs[i] != 0)
-        {
-            if (kill(all_fg_pcs[i], 20) < 0)
-                perror("Kill failed");
-            // fprintf(stderr, "\nEntered just child (%d)\n", all_fg_pcs[i]);
-            BG_Process[process_num_added]->pid = all_fg_pcs[i];
-            BG_Process[process_num_added]->processID = process_num_added + 1;
-            strcpy(BG_Process[process_num_added]->process_name, temp_name);
-            strcpy(BG_Process[process_num_added]->process_status, "T");
-            process_num_added++;
-            all_fg_pcs[i] = 0;
-        }
+        int pid = only_fg_pcs;
+        only_fg_pcs = -1;
+        printf("Sending Current FG process to BG: %d\n", pid);
+
+        BG_Process[process_num_added]->pid = pid;
+        BG_Process[process_num_added]->processID = process_num_added + 1;
+        strcpy(BG_Process[process_num_added]->process_name, temp_name);
+        strcpy(BG_Process[process_num_added]->process_status, "T");
+        process_num_added++;
     }
 }
 
@@ -289,7 +296,7 @@ void run_fg(char a[][sz], int t)
     signal(SIGTTOU, SIG_IGN);
     signal(SIGTTIN, SIG_IGN);
 
-    if (tcsetpgrp(STDIN_FILENO, getpgid(pid)) < 0)
+    if (tcsetpgrp(STDIN_FILENO, getpgid(pid)))
     {
         perror("Unable to transfer control to foreground process");
         // Setting signals to default
@@ -299,7 +306,7 @@ void run_fg(char a[][sz], int t)
     }
 
     // Getting the job running from bg
-    if (kill(pid, SIGCONT) < 0)
+    if (kill(pid, SIGCONT))
     {
         perror("Unable to get bg process to fg");
         // Setting signals to default
@@ -310,20 +317,21 @@ void run_fg(char a[][sz], int t)
 
     // Reached till this point
     // => process has come to fg
-    all_fg_pcs[pid] = pid;
+    // all_fg_pcs[pid] = pid;
+    only_fg_pcs = pid;
     BG_Process[idx]->pid = 0;
 
     // check for ctrl+C and ctrl+Z
-    signal(SIGINT, terminate_fg);
-    signal(SIGTSTP, send_fg_bg);
+    // signal(SIGINT, terminate_fg);
+    // signal(SIGTSTP, send_fg_bg);
 
     int status;
     if (waitpid(pid, &status, WUNTRACED) > 0)
         if (WIFSTOPPED(status) == 0)
-            all_fg_pcs[pid] = 0; // process terminated
+            only_fg_pcs = 0;
 
     // Terminal regains control
-    if (tcsetpgrp(STDIN_FILENO, getpgid(0)) < 0)
+    if (tcsetpgrp(STDIN_FILENO, getpgid(0)))
     {
         perror("Terminal failed to regain control");
         exit(EXIT_FAILURE);

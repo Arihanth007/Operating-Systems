@@ -8,13 +8,12 @@ void get_input(char *ostr)
     size_t size = 1024; // initial size of char array
     fflush(stdin);
     fflush(stdout);
-    char *inp_cmd = NULL;
+    char inp_cmd[size];
     size_t inp_len = 0;
-    int line_read = getline(&inp_cmd, &inp_len, stdin);
 
-    if (line_read <= 0)
+    if (!fgets(inp_cmd, size, stdin))
     {
-        perror("Taking input");
+        perror("Recieved EOF Character\n");
         isExit = 1;
         return;
     }
@@ -23,7 +22,6 @@ void get_input(char *ostr)
     my_tokenizer(inp_cmd, output);
 
     strcpy(ostr, output);
-    free(inp_cmd);
 }
 
 void my_tokenizer(char *string, char *output)
@@ -99,8 +97,3 @@ int my_compare(const void *a, const void *b)
 
     return strcmp(l->process_name, r->process_name);
 }
-
-// void my_sort(struct Process *BG_Process[])
-// {
-//     qsort(BG_Process, MAX_BG_PCS, sizeof(BG_Process), &my_compare);
-// }

@@ -8,7 +8,7 @@
 
 char hostname[sz],
     username[sz], home[sz], prevdir[2][sz], currentdir[sz], dirprint[sz], hist[25][sz];
-int all_bg_pcs[pid_sz] = {0}, all_fg_pcs[pid_sz] = {0};
+int all_bg_pcs[pid_sz] = {0}, all_fg_pcs[pid_sz] = {0}, only_fg_pcs = -1;
 int hist_sz = 0, process_num_added = 0, terminal_pid, isExit = 0;
 struct Process *BG_Process[MAX_BG_PCS];
 
@@ -117,6 +117,7 @@ void add_history(char *command)
 
 void initialise()
 {
+
     if (getlogin_r(username, sz) == -1)
         perror("Get username: ");
     if (gethostname(hostname, sz) == -1)
@@ -169,7 +170,9 @@ void check_pwd()
 void print_prompt()
 {
     check_pwd();
-    printf("<\033[0;31m%s\033[0;34m@%s\033[0;32m:%s\033[0m> ", username, hostname, dirprint);
+    char ps[50];
+    sprintf(ps, "<\033[0;31m%s\033[0;34m@%s\033[0;32m:%s\033[0m> ", username, hostname, dirprint);
+    write(STDOUT_FILENO, ps, strlen(ps));
 }
 
 int check_pipes(char a[][sz], int t)
@@ -351,18 +354,38 @@ int main(int argc, char **argv)
 {
     printf("%s\n\n", intro);
     initialise();
-    signal(SIGINT, terminate_fg);
-    signal(SIGTSTP, send_fg_bg);
+
+    struct sigaction sigchld_action;
+    memset(&sigchld_action, 0, sizeof(sigchld_action));
+    sigchld_action.sa_handler = sigchldHandler;
+    sigchld_action.sa_flags = SA_RESTART;
+    sigemptyset(&sigchld_action.sa_mask);
+    sigaction(SIGCHLD, &sigchld_action, NULL);
+
+    struct sigaction sigint_action;
+    memset(&sigint_action, 0, sizeof(sigint_action));
+    sigint_action.sa_handler = terminate_fg;
+    sigint_action.sa_flags = SA_RESTART;
+    sigemptyset(&sigint_action.sa_mask);
+    sigaction(SIGINT, &sigint_action, NULL);
+
+    struct sigaction sigtstp_action;
+    memset(&sigtstp_action, 0, sizeof(sigtstp_action));
+    sigtstp_action.sa_handler = send_fg_bg;
+    sigtstp_action.sa_flags = SA_RESTART;
+    sigemptyset(&sigtstp_action.sa_mask);
+    sigaction(SIGTSTP, &sigtstp_action, NULL);
+
+    
 
     while (1)
     {
-        if (isExit)
-            break;
-
         print_prompt();
 
         char string[sz], copy2[sz] = "";
         get_input(string);
+        if (isExit)
+            break;
         strcpy(copy2, string);
         add_history(string);
 
@@ -394,6 +417,34 @@ int main(int argc, char **argv)
                     strcpy(repeating_arr[i - 2], a[i]);
                 for (int i = 0; i < repeat; i++)
                     call_fn(repeating_arr, t - 2);
+            }
+            else if (strcmp(a[0], "replay") == 0) // checks replay
+            {
+                int repeat = 0, time_left = 0, interval = 0, period = 0, l = 0;
+                char b[ARR_LEN][sz];
+                for (int i = 1; i < t; i++)
+                {
+                    if (strcmp(a[i], "-command") == 0)
+                    {
+                        i++;
+                        while (strcmp(a[i], "-period") != 0 && strcmp(a[i], "-interval") != 0)
+                            strcpy(b[l++], a[i++]);
+                    }
+                    if (strcmp(a[i], "-interval") == 0)
+                        interval = atoi(a[++i]);
+                    if (strcmp(a[i], "-period") == 0)
+                        period = atoi(a[++i]);
+                }
+                if (interval == 0)
+                    break;
+                repeat = period / interval;
+                time_left = period - (repeat * interval);
+                for (int i = 0; i < repeat; i++)
+                {
+                    sleep(interval);
+                    call_fn(b, l);
+                }
+                sleep(time_left);
             }
             else
             {
@@ -535,6 +586,7 @@ int main(int argc, char **argv)
             }
         }
     }
+    clean_up();
 
     return 0;
 }

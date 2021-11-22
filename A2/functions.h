@@ -9,6 +9,5 @@ void print(char *str);
 int min(int a, int b);
 int max(int a, int b);
 int my_compare(const void *a, const void *b);
-// void my_sort(struct Process *BG_Process[]);
 
 #endif
