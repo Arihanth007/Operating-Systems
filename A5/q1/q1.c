@@ -4,7 +4,6 @@
 #include <unistd.h>
 #include <pthread.h>
 #include <semaphore.h>
-#include <errno.h>
 #define NUM_COURSES_PER_STUDENT 3
 #define COURSE_NAME_SIZE 15
 #define LAB_NAME_SIZE 15
