@@ -34,6 +34,13 @@ typedef struct person
 } person;
 person *people;
 
+typedef struct arg_struct
+{
+    person arg_person;
+    char zone;
+} args;
+args *team_args;
+
 typedef struct team
 {
     char team_type;
@@ -43,13 +50,6 @@ typedef struct team
     float *probability_goal;
 } team;
 team *teams;
-
-typedef struct arg_struct
-{
-    person arg_person;
-    char zone;
-} args;
-args *team_args;
 
 pthread_t *t_people, *t_teams;
 sem_t h_zone, a_zone, n_zone;
@@ -76,35 +76,35 @@ int char_cmp(char *input_char, char check_char[])
 
 void *search_in_n_zone(void *input_person)
 {
-    person p_person = *(person *)input_person;
+    args arguments = *(args *)input_person;
+    person p_person = arguments.arg_person;
 
-    int id = p_person.id;
-    // store the patience time of the person
+    int id = p_person.id, patience = p_person.patience_time;
     struct timespec ts;
     clock_gettime(CLOCK_REALTIME, &ts);
-    ts.tv_sec += p_person.patience_time;
+    ts.tv_sec += patience;
 
     // wait for a seat to be allocated in h_zone for the patience time
-    if (sem_timedwait(&n_zone, &ts) == -1 && errno == ETIMEDOUT)
+    int isPatience = sem_timedwait(&n_zone, &ts);
+    pthread_mutex_lock(&person_zone_lock[id]);
+    if (isPatience == -1 && errno == ETIMEDOUT)
     {
-        pthread_mutex_lock(&person_zone_lock[id]);
         // if the person was at the entrance till now, change the zone info so that he didn't get any zone
         if (char_cmp(&person_in_zone[id], "E") == 0)
             person_in_zone[id] = 'D';
-        pthread_mutex_unlock(&person_zone_lock[id]);
-        return NULL;
     }
-
-    pthread_mutex_lock(&person_zone_lock[id]);
-    // if the person was at the entrance or didn't get any seat from the other zone threads, allocate this zone
-    if (char_cmp(&person_in_zone[id], "E") == 0 || char_cmp(&person_in_zone[id], "D") == 0)
-    {
-        person_in_zone[id] = 'N';
-        printf(GRN "%s (%c) got a seat in zone N" RESET "\n", p_person.name, p_person.fan_type);
-    }
-    // if the person got allocated some zone, or left even, increment the semaphore since the person didn't use a seat
     else
-        sem_post(&n_zone);
+    {
+        // if the person was at the entrance or didn't get any seat from the other zone threads, allocate this zone
+        if (char_cmp(&person_in_zone[id], "E") == 0 || char_cmp(&person_in_zone[id], "D") == 0)
+        {
+            person_in_zone[id] = 'N';
+            printf(GRN "%s (%c) got a seat in zone N" RESET "\n", p_person.name, p_person.fan_type);
+        }
+        // if the person got allocated some zone, or left even, increment the semaphore since the person didn't use a seat
+        else
+            sem_post(&n_zone);
+    }
     pthread_mutex_unlock(&person_zone_lock[id]);
 
     return NULL;
@@ -112,40 +112,35 @@ void *search_in_n_zone(void *input_person)
 
 void *search_in_a_zone(void *input_person)
 {
-    // person p_person = *(person *)input_person;
     args arguments = *(args *)input_person;
     person p_person = arguments.arg_person;
-    char zone = arguments.zone;
-    printf("After madness: %c\n", zone);
 
-    int id = p_person.id;
-    // store the patience time of the person
+    int id = p_person.id, patience = p_person.patience_time;
     struct timespec ts;
     clock_gettime(CLOCK_REALTIME, &ts);
-    ts.tv_sec += p_person.patience_time;
+    ts.tv_sec += patience;
 
     // wait for a seat to be allocated in h_zone for the patience time
-    if (sem_timedwait(&a_zone, &ts) == -1 && errno == ETIMEDOUT)
+    int isPatience = sem_timedwait(&a_zone, &ts);
+    pthread_mutex_lock(&person_zone_lock[id]);
+    if (isPatience == -1 && errno == ETIMEDOUT)
     {
-        pthread_mutex_lock(&person_zone_lock[id]);
         // if the person was at the entrance till now, change the zone info so that he didn't get any zone
         if (char_cmp(&person_in_zone[id], "E") == 0)
             person_in_zone[id] = 'D';
-        pthread_mutex_unlock(&person_zone_lock[id]);
-        return NULL;
     }
-
-    pthread_mutex_lock(&person_zone_lock[id]);
-    // if the person was at the entrance or didn't get any seat from the other zone threads, allocate this zone
-    if (char_cmp(&person_in_zone[id], "E") == 0 || char_cmp(&person_in_zone[id], "D") == 0)
-    {
-        person_in_zone[id] = 'A';
-        printf(GRN "%s (%c) got a seat in zone A" RESET "\n", p_person.name, p_person.fan_type);
-    }
-    // if the person got allocated some zone, or left even, increment the semaphore since the person didn't use a seat
     else
     {
-        sem_post(&a_zone);
+
+        // if the person was at the entrance or didn't get any seat from the other zone threads, allocate this zone
+        if (char_cmp(&person_in_zone[id], "E") == 0 || char_cmp(&person_in_zone[id], "D") == 0)
+        {
+            person_in_zone[id] = 'A';
+            printf(GRN "%s (%c) got a seat in zone A" RESET "\n", p_person.name, p_person.fan_type);
+        }
+        // if the person got allocated some zone, or left even, increment the semaphore since the person didn't use a seat
+        else
+            sem_post(&a_zone);
     }
     pthread_mutex_unlock(&person_zone_lock[id]);
 
@@ -154,98 +149,45 @@ void *search_in_a_zone(void *input_person)
 
 void *search_in_h_zone(void *input_person)
 {
-    person p_person = *(person *)input_person;
+    args arguments = *(args *)input_person;
+    person p_person = arguments.arg_person;
 
-    int id = p_person.id;
-    // store the patience time of the person
+    int id = p_person.id, patience = p_person.patience_time;
     struct timespec ts;
     clock_gettime(CLOCK_REALTIME, &ts);
-    ts.tv_sec += p_person.patience_time;
+    ts.tv_sec += patience;
 
     // wait for a seat to be allocated in h_zone for the patience time
-    if (sem_timedwait(&h_zone, &ts) == -1 && errno == ETIMEDOUT)
+    int isPatience = sem_timedwait(&h_zone, &ts);
+    pthread_mutex_lock(&person_zone_lock[id]);
+    if (isPatience == -1 && errno == ETIMEDOUT) // patience runs out
     {
-        pthread_mutex_lock(&person_zone_lock[id]);
-        // if the person was at the entrance till now, change the zone info so that he didn't get any zone
+        // if the person was at the entrance till now,
+        // change the zone info so that he didn't get any zone
         if (char_cmp(&person_in_zone[id], "E") == 0)
             person_in_zone[id] = 'D';
-        pthread_mutex_unlock(&person_zone_lock[id]);
-        return NULL;
     }
-
-    pthread_mutex_lock(&person_zone_lock[id]);
-    // if the person was at the entrance or didn't get any seat from the other zone threads, allocate this zone
-    if (char_cmp(&person_in_zone[id], "E") == 0 || char_cmp(&person_in_zone[id], "D") == 0)
-    {
-        person_in_zone[id] = 'H';
-        printf(GRN "%s (%c) got a seat in zone H" RESET "\n", p_person.name, p_person.fan_type);
-    }
-    // if the person got allocated some zone, or left even, increment the semaphore since the person didn't use a seat
     else
-        sem_post(&h_zone);
+    {
+        // if the person was at the entrance or didn't get any seat from the other zone threads, allocate this zone
+        if (char_cmp(&person_in_zone[id], "E") == 0 || char_cmp(&person_in_zone[id], "D") == 0)
+        {
+            person_in_zone[id] = 'H';
+            printf(GRN "%s (%c) got a seat in zone H" RESET "\n", p_person.name, p_person.fan_type);
+        }
+        // if the person got allocated some zone, or left even, increment the semaphore since the person didn't use a seat
+        else
+            sem_post(&h_zone);
+    }
     pthread_mutex_unlock(&person_zone_lock[id]);
-
-    return NULL;
-}
-
-void *simulate_person_seat(void *input_person)
-{
-    person p_person = *(person *)input_person;
-    int id = p_person.id;
-
-    // make multiple threads based on what zones to look for, and wait for those threads to end
-    if (char_cmp(&p_person.fan_type, "N") == 0)
-    {
-        p_person.num_sems = 3;
-        p_person.sem_types[0] = 'N';
-        p_person.sem_types[1] = 'A';
-        p_person.sem_types[2] = 'H';
-        team_args = malloc(sizeof(args) * 3);
-        int i;
-        for (i = 0; i < 3; i++)
-            team_args[i].arg_person = p_person;
-        team_args[0].zone = 'N';
-        team_args[1].zone = 'A';
-        team_args[2].zone = 'H';
-        pthread_t h_thread, a_thread, n_thread;
-        pthread_create(&n_thread, NULL, search_in_n_zone, &p_person);
-        // pthread_create(&a_thread, NULL, search_in_a_zone, &p_person);
-        pthread_create(&a_thread, NULL, search_in_a_zone, &team_args[1]);
-        pthread_create(&h_thread, NULL, search_in_h_zone, &p_person);
-        pthread_join(n_thread, NULL);
-        pthread_join(a_thread, NULL);
-        pthread_join(h_thread, NULL);
-    }
-    else if (char_cmp(&p_person.fan_type, "A") == 0)
-    {
-        p_person.num_sems = 1;
-        p_person.sem_types[0] = 'A';
-        team_args = malloc(sizeof(args) * 1);
-        team_args[0].arg_person = p_person;
-        team_args[0].zone = 'A';
-        pthread_t a_thread;
-        // pthread_create(&a_thread, NULL, search_in_a_zone, &p_person);
-        pthread_create(&a_thread, NULL, search_in_a_zone, &team_args[0]);
-        pthread_join(a_thread, NULL);
-    }
-    else if (char_cmp(&p_person.fan_type, "H") == 0)
-    {
-        p_person.num_sems = 2;
-        p_person.sem_types[0] = 'N';
-        p_person.sem_types[1] = 'H';
-        pthread_t h_thread, n_thread;
-        pthread_create(&n_thread, NULL, search_in_n_zone, &p_person);
-        pthread_create(&h_thread, NULL, search_in_h_zone, &p_person);
-        pthread_join(n_thread, NULL);
-        pthread_join(h_thread, NULL);
-    }
 
     return NULL;
 }
 
 void *simulate_person_in_game(void *input_person)
 {
-    person p_person = *(person *)input_person;
+    args arguments = *(args *)input_person;
+    person p_person = arguments.arg_person;
 
     int type_of_fan = -1;
     // if the person is a A fan, then look at the goals of the Home team
@@ -275,23 +217,56 @@ void *simulate_person_in_game(void *input_person)
     return NULL;
 }
 
-void *simulate_person_enter_exit(void *input_person)
+void *simulate_person_seat(void *input_person)
 {
     person p_person = *(person *)input_person;
+    int id = p_person.id;
+
+    pthread_t threads[NUM_OF_SEMAPHORES]; // n, a, h
+    if (char_cmp(&p_person.fan_type, "N") == 0)
+    {
+        pthread_create(&threads[0], NULL, search_in_n_zone, &team_args[id]);
+        pthread_join(threads[0], NULL);
+        pthread_create(&threads[1], NULL, search_in_a_zone, &team_args[id]);
+        pthread_join(threads[1], NULL);
+        pthread_create(&threads[2], NULL, search_in_h_zone, &team_args[id]);
+        pthread_join(threads[2], NULL);
+    }
+    else if (char_cmp(&p_person.fan_type, "A") == 0)
+    {
+        pthread_create(&threads[1], NULL, search_in_a_zone, &team_args[id]);
+        pthread_join(threads[1], NULL);
+    }
+    else if (char_cmp(&p_person.fan_type, "H") == 0)
+    {
+        pthread_create(&threads[0], NULL, search_in_n_zone, &team_args[id]);
+        pthread_join(threads[0], NULL);
+        pthread_create(&threads[2], NULL, search_in_h_zone, &team_args[id]);
+        pthread_join(threads[2], NULL);
+    }
+
+    return NULL;
+}
+
+void *simulate_person_enter_exit(void *input_person)
+{
+    args arguments = *(args *)input_person;
+    person p_person = arguments.arg_person;
+    int id = p_person.id, rt = p_person.reach_time;
 
     // person comes to the gate at time reach_time
-    sleep(p_person.reach_time);
+    sleep(rt);
     printf(RED "%s has reached the stadium" RESET "\n", p_person.name);
 
     // run the thread where the person is simulated to wait for a seat in a zone and watch the match
     pthread_t thread;
-    pthread_create(&thread, NULL, simulate_person_seat, &p_person);
+    pthread_create(&thread, NULL, simulate_person_seat, &arguments);
     pthread_join(thread, NULL);
 
     // if the person did not find any seat
-    int isFound_seat = 0, id = p_person.id;
+    int isFound_seat = 0;
     pthread_mutex_lock(&person_zone_lock[id]);
-    if (person_in_zone[id] - 'D' != 0 && person_in_zone[id] - 'G' != 0)
+    if (char_cmp(&person_in_zone[id], "D") != 0 && char_cmp(&person_in_zone[id], "G") != 0)
         isFound_seat = 1;
     pthread_mutex_unlock(&person_zone_lock[id]);
 
@@ -302,7 +277,7 @@ void *simulate_person_enter_exit(void *input_person)
         clock_gettime(CLOCK_REALTIME, &ts);
 
         // person found a seat and is watching the game
-        pthread_create(&thread, NULL, simulate_person_in_game, &p_person);
+        pthread_create(&thread, NULL, simulate_person_in_game, &arguments);
 
         pthread_mutex_lock(&person_zone_lock[id]);
         ts.tv_sec += spectating_time;
@@ -370,7 +345,7 @@ void allocate_memory(int isDatastruct)
     if (isDatastruct == 1)
     {
         people = malloc(sizeof(person) * 1);
-        // team_args = malloc(sizeof(args) * 1);
+        team_args = malloc(sizeof(args) * 1);
         teams = malloc(sizeof(team) * 2);
         int i;
         for (i = 0; i < 2; i++)
@@ -407,7 +382,7 @@ void take_input()
             char name[PERSON_NAME_SIZE], support_teams;
             int reach_time, patience, num_goals;
             people = realloc(people, sizeof(person) * (num_people + 1));
-            // team_args = realloc(team_args, sizeof(args) * (num_people + 1));
+            team_args = realloc(team_args, sizeof(args) * (num_people + 1));
 
             scanf("%s %c %d %d %d", name, &support_teams, &reach_time, &patience, &num_goals);
             strcpy(people[num_people].name, name);
@@ -417,7 +392,7 @@ void take_input()
             people[num_people].num_goals = num_goals;
             people[num_people].id = num_people;
             people[num_people].group_no = i;
-            // team_args[num_people].arg_person = people[num_people];
+            team_args[num_people].arg_person = people[num_people];
 
             num_people++;
         }
@@ -495,7 +470,7 @@ int main(int argc, char *argv[])
     pthread_create(&t_teams[0], NULL, simulate_team, &teams[0]);
     pthread_create(&t_teams[1], NULL, simulate_team, &teams[1]);
     for (i = 0; i < num_people; i++)
-        pthread_create(&t_people[i], NULL, simulate_person_enter_exit, &people[i]);
+        pthread_create(&t_people[i], NULL, simulate_person_enter_exit, &team_args[i]);
 
     // wait for the threads to finish
     pthread_join(t_teams[0], NULL);
